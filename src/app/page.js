@@ -3,6 +3,7 @@
 import { useReducer, useState, useEffect } from 'react';
 import { initiëleStaat, reducer } from './state';
 import Game from './Game';
+import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { LogOut } from 'lucide-react';
 import TestSettings from '@/components/TestSettings';
@@ -61,6 +62,7 @@ export default function Home() {
     return <Game instellingen={instellingen} opStop={() => {
       setBezigMetSpelen(false);
       setTaskOverride(null);
+      if (user) haalCappies(user.id);
     }} />;
   }
 
