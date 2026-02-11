@@ -18,6 +18,7 @@ export default function Game({ instellingen, opStop }) {
     const [bezigMetOpslaan, setBezigMetOpslaan] = useState(false);
 
     const timerRef = useRef(null);
+    const sessionStartTime = useRef(Date.now());
 
     // Vragen genereren bij de start
     useEffect(() => {
@@ -158,7 +159,7 @@ export default function Game({ instellingen, opStop }) {
         if (!studentInfo) return;
 
         setBezigMetOpslaan(true);
-        const totaalTijd = (Date.now() - (instellingen.startTijd || Date.now())) / 1000;
+        const totaalTijd = (Date.now() - sessionStartTime.current) / 1000;
 
         const { data: oefening, error } = await supabase.from('oefeningen').insert([{
             student_id: studentInfo.id,

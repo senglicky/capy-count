@@ -9,6 +9,13 @@ CREATE TABLE IF NOT EXISTS taken (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- Kolom 'vragen' toevoegen als de tabel al bestond zonder deze kolom
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='taken' AND column_name='vragen') THEN
+        ALTER TABLE taken ADD COLUMN vragen JSONB NOT NULL DEFAULT '[]'::jsonb;
+    END IF;
+END $$;
+
 -- Kolom toevoegen aan oefeningen om te tracken welke taak is gemaakt
 DO $$ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='oefeningen' AND column_name='taak_id') THEN

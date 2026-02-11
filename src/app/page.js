@@ -50,7 +50,7 @@ export default function Home() {
   };
 
   if (bezigMetSpelen) {
-    const instellingen = taskOverride || { ...staat, startTijd: Date.now() };
+    const instellingen = taskOverride || staat;
     return <Game instellingen={instellingen} opStop={() => {
       setBezigMetSpelen(false);
       setTaskOverride(null);
