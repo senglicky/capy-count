@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { berekenMaxCappies, berekenVerdiendeCappies } from '@/utils/cappy-utils';
 
 export default function Game({ instellingen, opStop }) {
     const [vragen, setVragen] = useState([]);
@@ -16,6 +17,7 @@ export default function Game({ instellingen, opStop }) {
     const [vraagStartTime, setVraagStartTime] = useState(Date.now());
     const [vraagResultaten, setVraagResultaten] = useState([]);
     const [bezigMetOpslaan, setBezigMetOpslaan] = useState(false);
+    const [verdiendeCappies, setVerdiendeCappies] = useState(0);
 
     const timerRef = useRef(null);
     const sessionStartTime = useRef(Date.now());
@@ -161,17 +163,35 @@ export default function Game({ instellingen, opStop }) {
         setBezigMetOpslaan(true);
         const totaalTijd = (Date.now() - sessionStartTime.current) / 1000;
 
+        // Cappy berekening
+        const maxPotentieel = berekenMaxCappies(instellingen);
+        const verdiend = berekenVerdiendeCappies(
+            maxPotentieel,
+            finaleScore,
+            vragen.length,
+            fouten.length + (instellingen.aantalVragen - finaleResultaten.length) // fouten + overgeslagen
+        );
+        setVerdiendeCappies(verdiend);
+
         const { data: oefening, error } = await supabase.from('oefeningen').insert([{
             student_id: studentInfo.id,
             score: finaleScore,
             totaal_tijd: Math.round(totaalTijd),
             instellingen: instellingen,
-            taak_id: instellingen.taakId || null
+            taak_id: instellingen.taakId || null,
+            verdiende_cappies: verdiend
         }]).select().single();
 
         if (!error && oefening) {
             const resultatenMetId = finaleResultaten.map(r => ({ ...r, oefening_id: oefening.id }));
             await supabase.from('vraag_resultaten').insert(resultatenMetId);
+
+            // Update het cappies saldo van de student
+            if (verdiend > 0) {
+                const { data: userData } = await supabase.from('gebruikers').select('cappies').eq('id', studentInfo.id).single();
+                const huidigSaldo = userData?.cappies || 0;
+                await supabase.from('gebruikers').update({ cappies: huidigSaldo + verdiend }).eq('id', studentInfo.id);
+            }
         }
         setBezigMetOpslaan(false);
     };
@@ -186,7 +206,16 @@ export default function Game({ instellingen, opStop }) {
                 </header>
 
                 <main className="card">
-                    <h2>Je score: {score} van de {vragen.length}</h2>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: '#f0f9ff', padding: '1.5rem 2.5rem', borderRadius: '20px', border: '2px solid var(--primary-color)' }}>
+                            <img src="/cappycoin.png" alt="Cappy" style={{ width: '48px', height: '48px' }} />
+                            <div style={{ textAlign: 'left' }}>
+                                <span style={{ display: 'block', fontSize: '1rem', color: '#666' }}>Je verdiende:</span>
+                                <span style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--primary-color)' }}>+{verdiendeCappies}</span>
+                            </div>
+                        </div>
+                        <h2>Je score: {score} van de {vragen.length}</h2>
+                    </div>
 
                     {fouten.length > 0 ? (
                         <div style={{ textAlign: 'left', marginTop: '2rem' }}>

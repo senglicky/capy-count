@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, FileText } from 'lucide-react';
 import TestSettings from '@/components/TestSettings';
 import { printTaakPDF } from '@/utils/pdf-generator';
+import { berekenMaxCappies } from '@/utils/cappy-utils';
 
 export default function NieuweTaak() {
     const [staat, dispatch] = useReducer(reducer, initiëleStaat);
@@ -126,7 +127,12 @@ export default function NieuweTaak() {
                     <button className="btn btn-outline" onClick={() => router.push('/leraar/taken')}><ArrowLeft size={18} /></button>
                     <h1 style={{ margin: 0 }}>Nieuwe Toets</h1>
                 </div>
-                <div style={{ display: 'flex', gap: '1rem' }}>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#666', fontSize: '0.9rem' }}>
+                        <span>Verdien tot:</span>
+                        <img src="/cappycoin.png" alt="Cappy" style={{ width: '20px', height: '20px' }} />
+                        <span style={{ fontWeight: 'bold' }}>{berekenMaxCappies(staat)}</span>
+                    </div>
                     <button className="btn btn-outline" onClick={genereerPDF}>
                         <FileText size={18} style={{ marginRight: '0.5rem' }} /> PDF / Print
                     </button>

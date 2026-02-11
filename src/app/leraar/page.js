@@ -69,7 +69,7 @@ export default function TeacherDashboard() {
         // 1. Leerlingen ophalen
         const { data: leerlingenData } = await supabase
             .from('gebruikers')
-            .select('*')
+            .select('*, leraar_klassen(klas_id)')
             .eq('klas_id', klas.id)
             .eq('rol', 'student')
             .order('voornaam');
@@ -213,6 +213,7 @@ export default function TeacherDashboard() {
                                         <th style={{ padding: '1rem' }}>Gem. Score</th>
                                         <th style={{ padding: '1rem' }}>Gem. Tijd</th>
                                         <th style={{ padding: '1rem' }}>Laatst</th>
+                                        <th style={{ padding: '1rem' }}>Wallet</th>
                                         <th></th>
                                     </tr>
                                 </thead>
@@ -235,6 +236,12 @@ export default function TeacherDashboard() {
                                             </td>
                                             <td style={{ padding: '1rem' }}>{l.totaal > 0 ? `${l.gemTijd}s` : '-'}</td>
                                             <td style={{ padding: '1rem', fontSize: '0.9rem', color: '#666' }}>{l.laatste}</td>
+                                            <td style={{ padding: '1rem' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                                    <img src="/cappycoin.png" alt="Cappy" style={{ width: '18px', height: '18px' }} />
+                                                    <span style={{ fontWeight: 'bold' }}>{l.cappies || 0}</span>
+                                                </div>
+                                            </td>
                                             <td style={{ padding: '1rem' }}>
                                                 <button onClick={() => selecteerLeerling(l)} className="btn btn-outline" style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem' }}>
                                                     Historie

@@ -23,6 +23,16 @@ DO $$ BEGIN
     END IF;
 END $$;
 
+-- Cappy beloningen systeem
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='gebruikers' AND column_name='cappies') THEN
+        ALTER TABLE gebruikers ADD COLUMN cappies INTEGER DEFAULT 0;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='oefeningen' AND column_name='verdiende_cappies') THEN
+        ALTER TABLE oefeningen ADD COLUMN verdiende_cappies INTEGER DEFAULT 0;
+    END IF;
+END $$;
+
 -- RLS inschakelen
 ALTER TABLE taken ENABLE ROW LEVEL SECURITY;
 
