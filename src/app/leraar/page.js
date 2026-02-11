@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { BarChart, Users, BookOpen, LogOut, ChevronRight, Clock, Target } from 'lucide-react';
+import { BarChart, Users, BookOpen, LogOut, ChevronRight, Clock, Target, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function TeacherDashboard() {
@@ -109,6 +109,23 @@ export default function TeacherDashboard() {
             .eq('student_id', leerling.id)
             .order('datum', { ascending: false });
         setHistorie(data || []);
+    };
+
+    const verwijderResultaat = async (resultaatId) => {
+        if (!confirm('Weet je zeker dat je dit resultaat wilt verwijderen?')) return;
+
+        const { error } = await supabase
+            .from('oefeningen')
+            .delete()
+            .eq('id', resultaatId);
+
+        if (error) {
+            alert('Fout bij verwijderen: ' + error.message);
+        } else {
+            setHistorie(historie.filter(o => o.id !== resultaatId));
+            // Ook het overzicht updaten als we de klas verversen
+            if (geselecteerdeKlas) selecteerKlas(geselecteerdeKlas);
+        }
     };
 
     const logout = async () => {
@@ -253,9 +270,18 @@ export default function TeacherDashboard() {
                                                         )}
                                                     </div>
                                                 </div>
-                                                <div style={{ textAlign: 'right' }}>
-                                                    <p style={{ fontSize: '0.9rem' }}><Clock size={14} /> {oef.totaal_tijd}s</p>
-                                                    <p style={{ fontSize: '0.9rem' }}><Target size={14} /> {oef.instellingen.operaties === 'maal' ? 'Alleen x' : 'x en ÷'}</p>
+                                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                                    <div style={{ textAlign: 'right' }}>
+                                                        <p style={{ fontSize: '0.9rem' }}><Clock size={14} /> {oef.totaal_tijd}s</p>
+                                                        <p style={{ fontSize: '0.9rem' }}><Target size={14} /> {oef.instellingen.operaties === 'maal' ? 'Alleen x' : 'x en ÷'}</p>
+                                                    </div>
+                                                    <button
+                                                        className="btn btn-outline"
+                                                        style={{ color: 'var(--error)', padding: '0.4rem', marginLeft: '0.5rem' }}
+                                                        onClick={() => verwijderResultaat(oef.id)}
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
                                                 </div>
                                             </div>
 
