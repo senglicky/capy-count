@@ -157,19 +157,24 @@ export default function Game({ instellingen, opStop }) {
     };
 
     const slaGegevensOp = async (finaleResultaten, finaleScore) => {
-        const studentInfo = JSON.parse(localStorage.getItem('user'));
-        if (!studentInfo) return;
+        const userJson = localStorage.getItem('user');
+        if (!userJson) return;
+        const studentInfo = JSON.parse(userJson);
 
         setBezigMetOpslaan(true);
         const totaalTijd = (Date.now() - sessionStartTime.current) / 1000;
 
-        // Cappy berekening
+        // Cappy berekening op basis van resultaten (vermijd stale state)
+        const aantalFouten = finaleResultaten.filter(r => !r.is_correct).length;
+        const aantalNietIngeleverd = vragen.length - finaleResultaten.length;
+        const totaleStraf = aantalFouten + aantalNietIngeleverd;
+
         const maxPotentieel = berekenMaxCappies(instellingen);
         const verdiend = berekenVerdiendeCappies(
             maxPotentieel,
             finaleScore,
             vragen.length,
-            fouten.length + (instellingen.aantalVragen - finaleResultaten.length) // fouten + overgeslagen
+            totaleStraf
         );
         setVerdiendeCappies(verdiend);
 
@@ -186,11 +191,22 @@ export default function Game({ instellingen, opStop }) {
             const resultatenMetId = finaleResultaten.map(r => ({ ...r, oefening_id: oefening.id }));
             await supabase.from('vraag_resultaten').insert(resultatenMetId);
 
-            // Update het cappies saldo van de student
+            // Update het cappies saldo in de database
             if (verdiend > 0) {
-                const { data: userData } = await supabase.from('gebruikers').select('cappies').eq('id', studentInfo.id).single();
-                const huidigSaldo = userData?.cappies || 0;
-                await supabase.from('gebruikers').update({ cappies: huidigSaldo + verdiend }).eq('id', studentInfo.id);
+                // Haal actuele saldo op om race conditions (enigszins) te beperken
+                const { data: userData, error: userError } = await supabase
+                    .from('gebruikers')
+                    .select('cappies')
+                    .eq('id', studentInfo.id)
+                    .single();
+
+                if (!userError && userData) {
+                    const nieuwSaldo = (userData.cappies || 0) + verdiend;
+                    await supabase
+                        .from('gebruikers')
+                        .update({ cappies: nieuwSaldo })
+                        .eq('id', studentInfo.id);
+                }
             }
         }
         setBezigMetOpslaan(false);
