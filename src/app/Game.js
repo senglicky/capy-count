@@ -21,34 +21,39 @@ export default function Game({ instellingen, opStop }) {
 
     // Vragen genereren bij de start
     useEffect(() => {
-        const nieuweVragen = [];
-        const deTafels = instellingen.geselecteerdeTafels;
+        if (instellingen.vragen && instellingen.vragen.length > 0) {
+            // Gebruik de vragen die de leraar heeft klaargezet
+            setVragen(instellingen.vragen);
+        } else {
+            // Genereer willekeurige vragen (vrije oefening)
+            const nieuweVragen = [];
+            const deTafels = instellingen.geselecteerdeTafels;
 
-        for (let i = 0; i < instellingen.aantalVragen; i++) {
-            const tafel = deTafels[Math.floor(Math.random() * deTafels.length)];
-            const vermenigvuldiger = Math.floor(Math.random() * instellingen.bereik) + 1;
+            for (let i = 0; i < instellingen.aantalVragen; i++) {
+                const tafel = deTafels[Math.floor(Math.random() * deTafels.length)];
+                const vermenigvuldiger = Math.floor(Math.random() * instellingen.bereik) + 1;
 
-            let type = instellingen.operaties === 'beide'
-                ? (Math.random() > 0.5 ? 'maal' : 'deel')
-                : instellingen.operaties;
+                let type = instellingen.operaties === 'beide'
+                    ? (Math.random() > 0.5 ? 'maal' : 'deel')
+                    : instellingen.operaties;
 
-            let vraagTekst = '';
-            let correctAntwoord = 0;
+                let vraagTekst = '';
+                let correctAntwoord = 0;
 
-            if (type === 'maal') {
-                vraagTekst = `${vermenigvuldiger} x ${tafel}`;
-                correctAntwoord = vermenigvuldiger * tafel;
-            } else {
-                // Voor delen zorgen we dat het uitkomt
-                const product = vermenigvuldiger * tafel;
-                vraagTekst = `${product} : ${tafel}`;
-                correctAntwoord = vermenigvuldiger;
+                if (type === 'maal') {
+                    vraagTekst = `${vermenigvuldiger} x ${tafel}`;
+                    correctAntwoord = vermenigvuldiger * tafel;
+                } else {
+                    const product = vermenigvuldiger * tafel;
+                    vraagTekst = `${product} : ${tafel}`;
+                    correctAntwoord = vermenigvuldiger;
+                }
+
+                nieuweVragen.push({ vraag: vraagTekst, antwoord: correctAntwoord, type });
             }
-
-            nieuweVragen.push({ vraag: vraagTekst, antwoord: correctAntwoord, type });
+            setVragen(nieuweVragen);
         }
 
-        setVragen(nieuweVragen);
         setStatus('spelen');
         setVraagStartTime(Date.now());
 
@@ -159,7 +164,8 @@ export default function Game({ instellingen, opStop }) {
             student_id: studentInfo.id,
             score: finaleScore,
             totaal_tijd: Math.round(totaalTijd),
-            instellingen: instellingen
+            instellingen: instellingen,
+            taak_id: instellingen.taakId || null
         }]).select().single();
 
         if (!error && oefening) {

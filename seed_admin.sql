@@ -1,6 +1,6 @@
--- Stap 1: Maak de gebruiker aan in Supabase Auth (wachtwoord: welkom123)
+-- Stap 1: Maak de gebruiker aan in Supabase Auth (wachtwoord: welcome123)
 -- Dit moet in de SQL Editor van Supabase uitgevoerd worden.
--- We maken een gebruiker met e-mail 'admin@maaltafels.be'
+-- We maken een gebruiker met e-mail 'steven.englicky@bs-delinde.be'
 
 INSERT INTO auth.users (
   instance_id,
@@ -26,8 +26,8 @@ VALUES (
   gen_random_uuid(),
   'authenticated',
   'authenticated',
-  'admin@maaltafels.be',
-  extensions.crypt('welkom123', extensions.gen_salt('bf')),
+  'steven.englicky@bs-delinde.be',
+  extensions.crypt('welcome123', extensions.gen_salt('bf')),
   now(),
   now(),
   now(),
@@ -44,10 +44,10 @@ RETURNING id;
 
 -- STAP 2: Voeg de admin rol toe in onze gebruikers tabel
 -- Gebruik het ID dat hierboven is aangemaakt. 
--- In de SQL editor kun je dit in één keer doen met een subquery:
 
-INSERT INTO public.gebruikers (auth_id, voornaam, naam, rol)
-SELECT id, 'Admin', 'Beheerder', 'admin'
+INSERT INTO public.gebruikers (auth_id, voornaam, naam, rol, gebruikersnaam, email)
+SELECT id, 'Admin', 'Beheerder', 'admin', 'admin', 'steven.englicky@bs-delinde.be'
 FROM auth.users
-WHERE email = 'admin@maaltafels.be'
-ON CONFLICT (auth_id) DO NOTHING;
+WHERE email = 'steven.englicky@bs-delinde.be'
+ON CONFLICT (auth_id) DO UPDATE 
+SET gebruikersnaam = 'admin', email = 'steven.englicky@bs-delinde.be';

@@ -5,10 +5,12 @@ import { initiëleStaat, reducer } from './state';
 import Game from './Game';
 import { useRouter } from 'next/navigation';
 import { LogOut } from 'lucide-react';
+import TestSettings from '@/components/TestSettings';
 
 export default function Home() {
   const [staat, dispatch] = useReducer(reducer, initiëleStaat);
   const [bezigMetSpelen, setBezigMetSpelen] = useState(false);
+  const [taskOverride, setTaskOverride] = useState(null);
   const [user, setUser] = useState(null);
   const router = useRouter();
 
@@ -20,6 +22,17 @@ export default function Home() {
       const u = JSON.parse(savedUser);
       setUser(u);
       dispatch({ type: 'SET_NAAM', waarde: u.voornaam });
+
+      // Check of er een taak klaarstaat om te starten
+      const actieveTaak = localStorage.getItem('actieveTaak');
+      if (actieveTaak) {
+        const taakData = JSON.parse(actieveTaak);
+        localStorage.removeItem('actieveTaak');
+        // We overschrijven de staat met de taak-instellingen en starten
+        // Omdat dispatch asynchroon is, kunnen we beter direct de Game renderen met de taakData
+        setTaskOverride(taakData);
+        setBezigMetSpelen(true);
+      }
     }
   }, []);
 
@@ -37,7 +50,11 @@ export default function Home() {
   };
 
   if (bezigMetSpelen) {
-    return <Game instellingen={{ ...staat, startTijd: Date.now() }} opStop={() => setBezigMetSpelen(false)} />;
+    const instellingen = taskOverride || { ...staat, startTijd: Date.now() };
+    return <Game instellingen={instellingen} opStop={() => {
+      setBezigMetSpelen(false);
+      setTaskOverride(null);
+    }} />;
   }
 
   return (
@@ -48,7 +65,10 @@ export default function Home() {
           <h1>Maaltafels Oefenen</h1>
           <p>Hoi {user?.voornaam}! Klaar om te oefenen?</p>
         </div>
-        <button className="btn btn-outline" onClick={logout}><LogOut size={20} /></button>
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <button className="btn btn-primary" onClick={() => router.push('/taken')}>Mijn taken</button>
+          <button className="btn btn-outline" onClick={logout}><LogOut size={20} /></button>
+        </div>
       </header>
 
       <main className="card">
@@ -63,119 +83,7 @@ export default function Home() {
           />
         </section>
 
-        <section className="section">
-          <label className="section-title">Welke tafels wil je oefenen?</label>
-          <div className="button-grid">
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
-              <button
-                key={num}
-                className={`btn btn-outline ${staat.geselecteerdeTafels.includes(num) ? 'active' : ''}`}
-                onClick={() => dispatch({ type: 'TOGGLE_TAFEL', waarde: num })}
-              >
-                {num}
-              </button>
-            ))}
-          </div>
-        </section>
-
-        <section className="section">
-          <label className="section-title">Enkel vermenigvuldigen of ook delen?</label>
-          <div className="option-group">
-            <button
-              className={`btn btn-outline ${staat.operaties === 'maal' ? 'active' : ''}`}
-              onClick={() => dispatch({ type: 'SET_OPERATIES', waarde: 'maal' })}
-            >
-              Alleen x
-            </button>
-            <button
-              className={`btn btn-outline ${staat.operaties === 'beide' ? 'active' : ''}`}
-              onClick={() => dispatch({ type: 'SET_OPERATIES', waarde: 'beide' })}
-            >
-              x en ÷
-            </button>
-          </div>
-        </section>
-
-        <section className="section">
-          <label className="section-title">Hoe wil je oefenen?</label>
-          <div className="option-group">
-            <button
-              className={`btn btn-outline ${staat.modus === 'vrij' ? 'active' : ''}`}
-              onClick={() => dispatch({ type: 'SET_MODUS', waarde: 'vrij' })}
-            >
-              Vrij
-            </button>
-            <button
-              className={`btn btn-outline ${staat.modus === '2m' ? 'active' : ''}`}
-              onClick={() => dispatch({ type: 'SET_MODUS', waarde: '2m' })}
-            >
-              2 min
-            </button>
-            <button
-              className={`btn btn-outline ${staat.modus === '1m' ? 'active' : ''}`}
-              onClick={() => dispatch({ type: 'SET_MODUS', waarde: '1m' })}
-            >
-              1 min
-            </button>
-            <button
-              className={`btn btn-outline ${staat.modus === '30s' ? 'active' : ''}`}
-              onClick={() => dispatch({ type: 'SET_MODUS', waarde: '30s' })}
-            >
-              30 sec
-            </button>
-          </div>
-        </section>
-
-        <section className="section">
-          <label className="section-title">Tot hoe ver?</label>
-          <div className="option-group">
-            <button
-              className={`btn btn-outline ${staat.bereik === 10 ? 'active' : ''}`}
-              onClick={() => dispatch({ type: 'SET_BEREIK', waarde: 10 })}
-            >
-              Tot x10
-            </button>
-            <button
-              className={`btn btn-outline ${staat.bereik === 20 ? 'active' : ''}`}
-              onClick={() => dispatch({ type: 'SET_BEREIK', waarde: 20 })}
-            >
-              Tot x20
-            </button>
-          </div>
-        </section>
-
-        <section className="section">
-          <label className="section-title">Wanneer wil je de verbetering zien?</label>
-          <div className="option-group">
-            <button
-              className={`btn btn-outline ${staat.correctie === 'direct' ? 'active' : ''}`}
-              onClick={() => dispatch({ type: 'SET_CORRECTIE', waarde: 'direct' })}
-            >
-              Meteen (2de kans)
-            </button>
-            <button
-              className={`btn btn-outline ${staat.correctie === 'einde' ? 'active' : ''}`}
-              onClick={() => dispatch({ type: 'SET_CORRECTIE', waarde: 'einde' })}
-            >
-              Aan het einde
-            </button>
-          </div>
-        </section>
-
-        <section className="section">
-          <label className="section-title">Hoeveel vragen?</label>
-          <div className="option-group">
-            {[10, 20, 30].map((n) => (
-              <button
-                key={n}
-                className={`btn btn-outline ${staat.aantalVragen === n ? 'active' : ''}`}
-                onClick={() => dispatch({ type: 'SET_AANTAL', waarde: n })}
-              >
-                {n}
-              </button>
-            ))}
-          </div>
-        </section>
+        <TestSettings staat={staat} dispatch={dispatch} />
 
         <div style={{ marginTop: '3rem' }}>
           <button className="btn btn-primary" style={{ fontSize: '2rem', padding: '1.5rem 4rem' }} onClick={startOefening}>

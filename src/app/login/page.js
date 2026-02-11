@@ -36,8 +36,25 @@ export default function Login() {
                 router.push(rol === 'student' ? '/' : '/leraar');
             } else {
                 // Admin via echte Supabase Auth
+                let loginEmail = identivicatie;
+
+                // Als het geen e-mail lijkt te zijn, zoek dan de bijbehorende e-mail in de gebruikers tabel
+                if (!identivicatie.includes('@')) {
+                    const { data: mapping, error: mappingError } = await supabase
+                        .from('gebruikers')
+                        .select('email')
+                        .eq('gebruikersnaam', identivicatie)
+                        .eq('rol', 'admin')
+                        .single();
+
+                    if (mappingError || !mapping?.email) {
+                        throw new Error('Gebruikersnaam niet gevonden.');
+                    }
+                    loginEmail = mapping.email;
+                }
+
                 const { data, error } = await supabase.auth.signInWithPassword({
-                    email: identivicatie,
+                    email: loginEmail,
                     password: wachtwoord,
                 });
 
@@ -111,10 +128,10 @@ export default function Login() {
                     <form onSubmit={handleLogin} style={{ width: '100%' }}>
                         <div className="section" style={{ marginBottom: '1.5rem' }}>
                             <label className="section-title">
-                                {rol === 'admin' ? 'E-mailadres' : 'Voornaam'}
+                                {rol === 'admin' ? 'Gebruikersnaam of E-mail' : 'Voornaam'}
                             </label>
                             <input
-                                type={rol === 'admin' ? 'email' : 'text'}
+                                type="text"
                                 className="input-field"
                                 value={identivicatie}
                                 onChange={(e) => setIdentivicatie(e.target.value)}

@@ -105,7 +105,7 @@ export default function TeacherDashboard() {
         setGeselecteerdeLeerling(leerling);
         const { data } = await supabase
             .from('oefeningen')
-            .select('*')
+            .select('*, taken(titel)')
             .eq('student_id', leerling.id)
             .order('datum', { ascending: false });
         setHistorie(data || []);
@@ -127,6 +127,9 @@ export default function TeacherDashboard() {
                     <h1 style={{ margin: 0 }}>Leraar Dashboard</h1>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <button className="btn btn-primary" onClick={() => router.push('/leraar/taken')}>
+                        <BookOpen size={18} style={{ marginRight: '0.5rem' }} /> Toetsen Beheren
+                    </button>
                     <span>Welkom, <strong>{user?.voornaam}</strong></span>
                     <button className="btn btn-outline" onClick={logout}><LogOut size={18} /></button>
                 </div>
@@ -241,7 +244,14 @@ export default function TeacherDashboard() {
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                 <div>
                                                     <p style={{ fontSize: '0.9rem', color: '#666' }}>{new Date(oef.datum).toLocaleString('nl-NL')}</p>
-                                                    <p style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>Score: {oef.score} / {oef.instellingen.aantalVragen}</p>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                        <p style={{ fontSize: '1.2rem', fontWeight: 'bold', margin: 0 }}>Score: {oef.score} / {oef.instellingen.aantalVragen}</p>
+                                                        {oef.taken && (
+                                                            <span style={{ padding: '0.2rem 0.5rem', background: 'var(--primary-color)', color: 'white', borderRadius: '4px', fontSize: '0.75rem' }}>
+                                                                Toets: {oef.taken.titel}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                                 <div style={{ textAlign: 'right' }}>
                                                     <p style={{ fontSize: '0.9rem' }}><Clock size={14} /> {oef.totaal_tijd}s</p>
