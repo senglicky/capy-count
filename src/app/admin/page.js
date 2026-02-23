@@ -304,6 +304,7 @@ function StudentManagement({ klassen }) {
     const [klasId, setKlasId] = useState('');
     const [klasnummer, setKlasnummer] = useState('');
     const [wachtwoord, setWachtwoord] = useState('');
+    const [cappies, setCappies] = useState(0);
     const [bewerkendeLeerlingId, setBewerkendeLeerlingId] = useState(null);
 
     useEffect(() => {
@@ -326,6 +327,7 @@ function StudentManagement({ klassen }) {
 
     const resetForm = () => {
         setNaam(''); setVoornaam(''); setKlasId(''); setKlasnummer(''); setWachtwoord('');
+        setCappies(0);
         setBewerkendeLeerlingId(null);
         setModus('lijst');
     };
@@ -337,6 +339,7 @@ function StudentManagement({ klassen }) {
         setKlasId(l.klas_id);
         setKlasnummer(l.klasnummer || '');
         setWachtwoord(''); // Wachtwoord niet tonen
+        setCappies(l.cappies || 0);
         setModus('manueel');
     };
 
@@ -356,6 +359,7 @@ function StudentManagement({ klassen }) {
             voornaam,
             klas_id: klasId,
             klasnummer: parseInt(klasnummer) || 0,
+            cappies: parseInt(cappies) || 0,
             rol: 'student'
         };
         if (wachtwoord) data.wachtwoord_plain = wachtwoord;
@@ -446,6 +450,10 @@ function StudentManagement({ klassen }) {
                                 <div>
                                     <strong>{l.voornaam} {l.naam}</strong> (nr. {l.klasnummer || '?'})
                                     <div style={{ fontSize: '0.9rem', color: '#666' }}>Klas: {l.klassen?.naam}</div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.9rem', marginTop: '0.2rem' }}>
+                                        <img src="/cappycoin.png" alt="Cappy" style={{ width: '16px', height: '16px' }} />
+                                        <span style={{ fontWeight: 'bold' }}>{l.cappies || 0}</span>
+                                    </div>
                                 </div>
                                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                                     <button onClick={() => startBewerken(l)} className="btn btn-outline" style={{ padding: '0.5rem' }}>Aanpassen</button>
@@ -483,14 +491,27 @@ function StudentManagement({ klassen }) {
                         </select>
                         <input type="number" className="input-field" placeholder="Nr" value={klasnummer} onChange={e => setKlasnummer(e.target.value)} />
                     </div>
-                    <input
-                        type="text"
-                        className="input-field"
-                        placeholder={bewerkendeLeerlingId ? "Wachtwoord (leeg laten om niet te wijzigen)" : "Wachtwoord"}
-                        value={wachtwoord}
-                        onChange={e => setWachtwoord(e.target.value)}
-                        required={!bewerkendeLeerlingId}
-                    />
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <input
+                            type="text"
+                            className="input-field"
+                            placeholder={bewerkendeLeerlingId ? "Wachtwoord (leeg laten om niet te wijzigen)" : "Wachtwoord"}
+                            value={wachtwoord}
+                            onChange={e => setWachtwoord(e.target.value)}
+                            required={!bewerkendeLeerlingId}
+                        />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <img src="/cappycoin.png" alt="Cappy" style={{ width: '24px', height: '24px' }} />
+                            <input
+                                type="number"
+                                className="input-field"
+                                placeholder="Cappies"
+                                value={cappies}
+                                onChange={e => setCappies(e.target.value)}
+                                style={{ marginBottom: 0 }}
+                            />
+                        </div>
+                    </div>
                     <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
                         <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={bezig}>
                             {bewerkendeLeerlingId ? 'Wijzigingen opslaan' : 'Leerling toevoegen'}

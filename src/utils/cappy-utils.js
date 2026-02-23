@@ -41,17 +41,12 @@ export const berekenMaxCappies = (instellingen) => {
 export const berekenVerdiendeCappies = (maxCappies, aantalCorrect, totaalVragen, aantalFouten) => {
     if (aantalCorrect === 0) return 0;
 
-    // Start met de max cappies
-    let verdiend = maxCappies;
-
-    // Elke fout kost 1 cappy
-    verdiend -= aantalFouten;
-
-    // Onvoltooide vragen (indien tijd op is) kosten ook 1 cappy per stuk
+    // Aantal niet-beantwoorde vragen
     const onvoltooid = totaalVragen - (aantalCorrect + aantalFouten);
-    if (onvoltooid > 0) {
-        verdiend -= onvoltooid;
-    }
+
+    // Start met de max cappies en trek strafpunten af
+    // Elke fout kosh 1 cappy, elke onvoltooide vraag kost 1 cappy
+    let verdiend = maxCappies - aantalFouten - onvoltooid;
 
     return Math.max(0, verdiend);
 };

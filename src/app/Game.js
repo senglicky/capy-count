@@ -151,9 +151,13 @@ export default function Game({ instellingen, opStop }) {
     };
 
     const afronden = async (finaleResultaten, finaleScore) => {
+        // Gebruik de huidige state als argumenten ontbreken (bv. bij timer expiry)
+        const resultaten = finaleResultaten || vraagResultaten;
+        const eindScore = finaleScore !== undefined ? finaleScore : score;
+
         setStatus('resultaten');
         clearInterval(timerRef.current);
-        await slaGegevensOp(finaleResultaten, finaleScore);
+        await slaGegevensOp(resultaten, eindScore);
     };
 
     const slaGegevensOp = async (finaleResultaten, finaleScore) => {
@@ -201,11 +205,21 @@ export default function Game({ instellingen, opStop }) {
                     .single();
 
                 if (!userError && userData) {
-                    const nieuwSaldo = (userData.cappies || 0) + verdiend;
-                    await supabase
+                    const huidigSaldo = userData.cappies || 0;
+                    const nieuwSaldo = huidigSaldo + verdiend;
+
+                    const { error: updateError } = await supabase
                         .from('gebruikers')
                         .update({ cappies: nieuwSaldo })
                         .eq('id', studentInfo.id);
+
+                    if (!updateError) {
+                        // Update lokale wallet info voor instant feedback
+                        const updatedUser = { ...studentInfo, cappies: nieuwSaldo };
+                        localStorage.setItem('user', JSON.stringify(updatedUser));
+                    } else {
+                        console.error('Fout bij bijwerken saldo:', updateError);
+                    }
                 }
             }
         }
@@ -217,8 +231,17 @@ export default function Game({ instellingen, opStop }) {
     if (status === 'resultaten') {
         return (
             <div className="container">
-                <header>
-                    <h1>Goed gedaan, {instellingen.naam}!</h1>
+                <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        {JSON.parse(localStorage.getItem('user'))?.avatars?.afbeelding_url && (
+                            <img
+                                src={JSON.parse(localStorage.getItem('user')).avatars.afbeelding_url}
+                                alt="Avatar"
+                                style={{ width: '50px', height: '50px', borderRadius: '50%', border: '3px solid var(--primary-color)' }}
+                            />
+                        )}
+                        <h1>Goed gedaan, {instellingen.naam}!</h1>
+                    </div>
                 </header>
 
                 <main className="card">
@@ -268,6 +291,16 @@ export default function Game({ instellingen, opStop }) {
     return (
         <div className="container">
             <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    {JSON.parse(localStorage.getItem('user'))?.avatars?.afbeelding_url && (
+                        <img
+                            src={JSON.parse(localStorage.getItem('user')).avatars.afbeelding_url}
+                            alt="Avatar"
+                            style={{ width: '40px', height: '40px', borderRadius: '50%', border: '2px solid var(--primary-color)' }}
+                        />
+                    )}
+                    <p style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{instellingen.naam}</p>
+                </div>
                 <p style={{ fontSize: '1.2rem' }}>Vraag {huidigeIndex + 1} / {vragen.length}</p>
                 <p style={{ fontSize: '1.2rem', color: tijd < 10 && instellingen.modus !== 'vrij' ? 'var(--error)' : 'inherit' }}>
                     {instellingen.modus !== 'vrij' ? `Tijd: ${tijd}s` : 'Vrije oefening'}
