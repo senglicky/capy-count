@@ -39,6 +39,8 @@ body.no-scroll {
   overflow: hidden;
   height: 100vh;
   height: 100dvh;
+  display: flex;
+  flex-direction: column;
 }
 
 .container {
@@ -52,8 +54,7 @@ body.no-scroll {
 .game-layout {
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  height: 100dvh;
+  height: 100%;
   padding: 1rem;
   max-width: 800px;
   margin: 0 auto;
