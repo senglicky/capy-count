@@ -145,7 +145,7 @@ export default function TeacherDashboard() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <button className="btn btn-primary" onClick={() => router.push('/leraar/taken')}>
-                        <BookOpen size={18} style={{ marginRight: '0.5rem' }} /> Toetsen Beheren
+                        <BookOpen size={18} style={{ marginRight: '0.5rem' }} /> Taken Beheren
                     </button>
                     <span>Welkom, <strong>{user?.voornaam}</strong></span>
                     <button className="btn btn-outline" onClick={logout}><LogOut size={18} /></button>
@@ -272,7 +272,7 @@ export default function TeacherDashboard() {
                                                         <p style={{ fontSize: '1.2rem', fontWeight: 'bold', margin: 0 }}>Score: {oef.score} / {oef.instellingen.aantalVragen}</p>
                                                         {oef.taken && (
                                                             <span style={{ padding: '0.2rem 0.5rem', background: 'var(--primary-color)', color: 'white', borderRadius: '4px', fontSize: '0.75rem' }}>
-                                                                Toets: {oef.taken.titel}
+                                                                Taak: {oef.taken.titel}
                                                             </span>
                                                         )}
                                                     </div>

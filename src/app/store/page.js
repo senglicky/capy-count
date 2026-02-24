@@ -47,6 +47,7 @@ export default function AvatarStore() {
         const { data: avatarList } = await supabase
             .from('avatars')
             .select('*')
+            .eq('is_actief', true)
             .order('prijs', { ascending: true });
         setAvatars(avatarList || []);
 

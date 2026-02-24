@@ -22,6 +22,13 @@ function reducer(staat, actie) {
         ? staat.geselecteerdeTafels.filter((t) => t !== actie.waarde)
         : [...staat.geselecteerdeTafels, actie.waarde];
       return { ...staat, geselecteerdeTafels: tafels.sort((a, b) => a - b) };
+    case "SELECT_ALLE_TAFELS":
+      const alleTafels = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+      const zijnAllemaalGeselecteerd = staat.geselecteerdeTafels.length === alleTafels.length;
+      return {
+        ...staat,
+        geselecteerdeTafels: zijnAllemaalGeselecteerd ? [] : alleTafels
+      };
     case "SET_MODUS":
       return { ...staat, modus: actie.waarde };
     case "SET_OPERATIES":

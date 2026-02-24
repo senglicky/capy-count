@@ -64,7 +64,7 @@ export default function LeraarTaken() {
                     <h1 style={{ margin: 0 }}>Taken Beheren</h1>
                 </div>
                 <button className="btn btn-primary" onClick={() => router.push('/leraar/taken/nieuw')}>
-                    <Plus size={18} style={{ marginRight: '0.5rem' }} /> Nieuwe Toets
+                    <Plus size={18} style={{ marginRight: '0.5rem' }} /> Nieuwe Taak
                 </button>
             </header>
 
@@ -74,7 +74,7 @@ export default function LeraarTaken() {
                         <BookOpen size={64} color="#ccc" style={{ marginBottom: '1rem' }} />
                         <p>Je hebt nog geen taken aangemaakt.</p>
                         <button className="btn btn-primary" style={{ marginTop: '1rem' }} onClick={() => router.push('/leraar/taken/nieuw')}>
-                            Maak je eerste toets!
+                            Maak je eerste taak!
                         </button>
                     </div>
                 ) : (

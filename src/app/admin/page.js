@@ -3,14 +3,14 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import Papa from 'papaparse';
-import { Plus, Users, School, Upload, Trash2, LogOut } from 'lucide-react';
+import { Plus, Users, School, Upload, Trash2, LogOut, ShoppingBag, Edit2, Eye, EyeOff } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function AdminDashboard() {
     const [klassen, setKlassen] = useState([]);
     const [leraren, setLeraren] = useState([]);
     const [nieuweKlasNaam, setNieuweKlasNaam] = useState('');
-    const [tab, setTab] = useState('klassen'); // klassen, leraren, leerlingen
+    const [tab, setTab] = useState('klassen'); // klassen, leraren, leerlingen, store
     const [laden, setLaden] = useState(true);
     const router = useRouter();
 
@@ -77,6 +77,9 @@ export default function AdminDashboard() {
                 <button className={`btn btn-outline ${tab === 'leerlingen' ? 'active' : ''}`} onClick={() => setTab('leerlingen')}>
                     <Upload size={20} /> Leerlingen (CSV)
                 </button>
+                <button className={`btn btn-outline ${tab === 'store' ? 'active' : ''}`} onClick={() => setTab('store')}>
+                    <ShoppingBag size={20} /> Cappy Store
+                </button>
             </div>
 
             <main className="card">
@@ -129,6 +132,12 @@ export default function AdminDashboard() {
                     <section>
                         <h2>Leerlingen Import & Beheer</h2>
                         <StudentManagement klassen={klassen} />
+                    </section>
+                )}
+                {tab === 'store' && (
+                    <section>
+                        <h2>Cappy Store Beheer</h2>
+                        <StoreManagement />
                     </section>
                 )}
             </main>
@@ -520,6 +529,140 @@ function StudentManagement({ klassen }) {
                     </div>
                 </form>
             )}
+        </div>
+    );
+}
+
+function StoreManagement() {
+    const [avatars, setAvatars] = useState([]);
+    const [laden, setLaden] = useState(true);
+    const [bezig, setBezig] = useState(false);
+    const [bewerkendeAvatar, setBewerkendeAvatar] = useState(null);
+
+    // Form fields
+    const [naam, setNaam] = useState('');
+    const [prijs, setPrijs] = useState(20);
+    const [afbeeldingUrl, setAfbeeldingUrl] = useState('');
+    const [isActief, setIsActief] = useState(true);
+
+    useEffect(() => {
+        haalAvatars();
+    }, []);
+
+    const haalAvatars = async () => {
+        setLaden(true);
+        const { data } = await supabase.from('avatars').select('*').order('created_at', { ascending: false });
+        setAvatars(data || []);
+        setLaden(false);
+    };
+
+    const resetForm = () => {
+        setNaam('');
+        setPrijs(20);
+        setAfbeeldingUrl('');
+        setIsActief(true);
+        setBewerkendeAvatar(null);
+    };
+
+    const slaAvatarOp = async (e) => {
+        e.preventDefault();
+        setBezig(true);
+
+        const data = { naam, prijs: parseInt(prijs), afbeelding_url: afbeeldingUrl, is_actief: isActief };
+
+        if (bewerkendeAvatar) {
+            const { error } = await supabase.from('avatars').update(data).eq('id', bewerkendeAvatar.id);
+            if (error) alert(error.message);
+            else { alert('Avatar bijgewerkt!'); resetForm(); haalAvatars(); }
+        } else {
+            const { error } = await supabase.from('avatars').insert([data]);
+            if (error) alert(error.message);
+            else { alert('Avatar toegevoegd!'); resetForm(); haalAvatars(); }
+        }
+        setBezig(false);
+    };
+
+    const startBewerken = (a) => {
+        setBewerkendeAvatar(a);
+        setNaam(a.naam);
+        setPrijs(a.prijs);
+        setAfbeeldingUrl(a.afbeelding_url);
+        setIsActief(a.is_actief !== false);
+    };
+
+    const verwijderAvatar = async (id) => {
+        if (!confirm('Weet je zeker dat je deze avatar wilt verwijderen?')) return;
+        const { error } = await supabase.from('avatars').delete().eq('id', id);
+        if (error) alert(error.message);
+        else haalAvatars();
+    };
+
+    const toggleVisibiliteit = async (a) => {
+        const { error } = await supabase.from('avatars').update({ is_actief: !a.is_actief }).eq('id', a.id);
+        if (error) alert(error.message);
+        else haalAvatars();
+    };
+
+    if (laden) return <p>Laden...</p>;
+
+    return (
+        <div>
+            <form onSubmit={slaAvatarOp} className="card" style={{ background: '#f9f9f9', marginBottom: '2rem' }}>
+                <h3>{bewerkendeAvatar ? 'Avatar aanpassen' : 'Nieuwe avatar toevoegen'}</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 150px', gap: '1rem' }}>
+                    <input type="text" className="input-field" placeholder="Naam van de avatar" value={naam} onChange={e => setNaam(e.target.value)} required />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <img src="/cappycoin.png" alt="Cappy" style={{ width: '24px', height: '24px' }} />
+                        <input type="number" className="input-field" placeholder="Prijs" value={prijs} onChange={e => setPrijs(e.target.value)} required style={{ marginBottom: 0 }} />
+                    </div>
+                </div>
+                <input type="text" className="input-field" placeholder="Afbeelding URL (bijv: /avatars/new_capy.png)" value={afbeeldingUrl} onChange={e => setAfbeeldingUrl(e.target.value)} required />
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.5rem' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={isActief} onChange={e => setIsActief(e.target.checked)} />
+                        Beschikbaar in winkel
+                    </label>
+                </div>
+
+                <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+                    <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={bezig}>
+                        {bewerkendeAvatar ? 'Opslaan' : 'Toevoegen'}
+                    </button>
+                    {bewerkendeAvatar && (
+                        <button type="button" className="btn btn-outline" onClick={resetForm}>Annuleren</button>
+                    )}
+                </div>
+            </form>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1.5rem' }}>
+                {avatars.map(a => (
+                    <div key={a.id} className="card" style={{
+                        textAlign: 'center',
+                        padding: '1rem',
+                        opacity: a.is_actief === false ? 0.6 : 1,
+                        background: a.is_actief === false ? '#f1f5f9' : '#fff'
+                    }}>
+                        <img src={a.afbeelding_url} alt={a.naam} style={{ width: '80px', height: '80px', borderRadius: '50%', marginBottom: '1rem', border: '2px solid #eee' }} />
+                        <h4 style={{ margin: '0 0 0.5rem 0' }}>{a.naam}</h4>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', marginBottom: '1rem' }}>
+                            <img src="/cappycoin.png" alt="Cappy" style={{ width: '16px', height: '16px' }} />
+                            <strong>{a.prijs}</strong>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem' }}>
+                            <button className="btn btn-outline" style={{ padding: '0.4rem' }} onClick={() => startBewerken(a)} title="Bewerken">
+                                <Edit2 size={16} />
+                            </button>
+                            <button className="btn btn-outline" style={{ padding: '0.4rem' }} onClick={() => toggleVisibiliteit(a)} title={a.is_actief ? 'Verbergen' : 'Tonen'}>
+                                {a.is_actief ? <Eye size={16} /> : <EyeOff size={16} />}
+                            </button>
+                            <button className="btn btn-outline" style={{ padding: '0.4rem', color: 'var(--error)' }} onClick={() => verwijderAvatar(a.id)} title="Verwijderen">
+                                <Trash2 size={16} />
+                            </button>
+                        </div>
+                    </div>
+                ))}
+            </div>
         </div>
     );
 }

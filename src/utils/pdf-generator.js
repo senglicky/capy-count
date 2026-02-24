@@ -10,7 +10,7 @@ export const printTaakPDF = (titel, vragen) => {
     printWindow.document.write(`
         <html>
             <head>
-                <title>${titel || 'Maaltafels Toets'}</title>
+                <title>${titel || 'Maaltafels Taak'}</title>
                 <style>
                     body { font-family: sans-serif; padding: 40px; }
                     h1 { text-align: center; color: #333; }
@@ -21,7 +21,7 @@ export const printTaakPDF = (titel, vragen) => {
                 </style>
             </head>
             <body>
-                <h1>${titel || 'Maaltafels Toets'}</h1>
+                <h1>${titel || 'Maaltafels Taak'}</h1>
                 <div class="info">
                     <p><strong>Naam:</strong> ......................................................</p>
                     <p><strong>Datum:</strong> .....................................................</p>

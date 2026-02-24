@@ -5,7 +5,7 @@ import { initiëleStaat, reducer } from './state';
 import Game from './Game';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import { LogOut, Star } from 'lucide-react';
+import { Star } from 'lucide-react';
 import TestSettings from '@/components/TestSettings';
 
 import { berekenMaxCappies } from '@/utils/cappy-utils';
@@ -26,13 +26,20 @@ export default function Home() {
       router.push('/login');
     } else {
       const u = JSON.parse(savedUser);
+      if (u.rol === 'admin') {
+        router.push('/admin');
+        return;
+      }
+      if (u.rol === 'leraar') {
+        router.push('/leraar');
+        return;
+      }
       setUser(u);
       dispatch({ type: 'SET_NAAM', waarde: u.voornaam });
-      haalCappies(u.id);
+      haulCappies(u.id);
       haalStatistieken(u.id);
       checkPendingTasks(u.klas_id, u.id);
 
-      // Check of er een taak klaarstaat om te starten
       const actieveTaak = localStorage.getItem('actieveTaak');
       if (actieveTaak) {
         const taakData = JSON.parse(actieveTaak);
@@ -43,23 +50,17 @@ export default function Home() {
     }
   }, []);
 
-  const haalCappies = async (userId) => {
-    // Haal zowel cappies als de actieve avatar op
-    // We gebruiken de expliciete relatienaam actieve_avatar_id
+  const haulCappies = async (userId) => {
     const { data, error } = await supabase
       .from('gebruikers')
       .select('cappies, actieve_avatar_id, avatars!gebruikers_actieve_avatar_id_fkey(afbeelding_url)')
       .eq('id', userId)
       .single();
 
-    if (error) {
-      console.error('Fout bij ophalen cappies/avatar:', error);
-    }
+    if (error) console.error('Fout bij ophalen cappies:', error);
 
     if (data) {
       setCappies(data.cappies);
-      // Let op: Supabase nest de data onder de alias/tabelnaam
-      // Als de join werkt, staat de afbeelding in data.avatars.afbeelding_url
       const u = JSON.parse(localStorage.getItem('user'));
       const updatedUser = { ...u, ...data };
       setUser(updatedUser);
@@ -85,7 +86,6 @@ export default function Home() {
 
       data.forEach(oefening => {
         totaalPunten += oefening.score;
-        // Gebruik aantalVragen uit instellingen, fallback naar 10 als het ontbreekt
         const vragenInDezeOefening = oefening.instellingen?.aantalVragen || 10;
         totaalMogelijk += vragenInDezeOefening;
       });
@@ -97,25 +97,11 @@ export default function Home() {
 
   const checkPendingTasks = async (klasId, userId) => {
     if (!klasId) return;
-
-    // 1. Alle taken voor de klas ophalen
-    const { data: alleTaken } = await supabase
-      .from('taken')
-      .select('id')
-      .eq('klas_id', klasId);
-
+    const { data: alleTaken } = await supabase.from('taken').select('id').eq('klas_id', klasId);
     if (!alleTaken || alleTaken.length === 0) return;
-
-    // 2. Reeds gemaakte taken voor deze student ophalen
-    const { data: gemaakteOefeningen } = await supabase
-      .from('oefeningen')
-      .select('taak_id')
-      .eq('student_id', userId)
-      .not('taak_id', 'is', null);
-
+    const { data: gemaakteOefeningen } = await supabase.from('oefeningen').select('taak_id').eq('student_id', userId).not('taak_id', 'is', null);
     const gemaakteIds = gemaakteOefeningen?.map(o => o.taak_id) || [];
     const openTaken = alleTaken.filter(t => !gemaakteIds.includes(t.id));
-
     setHasPendingTasks(openTaken.length > 0);
   };
 
@@ -127,212 +113,288 @@ export default function Home() {
     setBezigMetSpelen(true);
   };
 
-  const logout = () => {
-    localStorage.removeItem('user');
-    router.push('/login');
-  };
-
   if (bezigMetSpelen) {
     const instellingen = taskOverride || staat;
     return <Game instellingen={instellingen} opStop={() => {
       setBezigMetSpelen(false);
       setTaskOverride(null);
       if (user) {
-        haalCappies(user.id);
-        if (typeof haalStatistieken === 'function') haalStatistieken(user.id);
+        haulCappies(user.id);
+        haalStatistieken(user.id);
       }
     }} />;
   }
 
   return (
-    <div className="container">
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
-        <div>
-          <h2 style={{ color: 'var(--primary-color)', marginBottom: '0.5rem' }}>Capy-Count</h2>
-          <h1 style={{ margin: 0, fontSize: '2.5rem' }}>Maaltafels Oefenen</h1>
-          <p>Hoi {user?.voornaam}! Klaar om te oefenen?</p>
-        </div>
+    <div className="container" style={{ position: 'relative', minHeight: 'calc(100vh - 70px)', paddingBottom: '4rem', paddingTop: '2.5rem' }}>
+      {/* Subtle Background Logo */}
+      <div style={{
+        position: 'fixed',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: '100%',
+        maxWidth: '1000px',
+        opacity: 0.02,
+        pointerEvents: 'none',
+        zIndex: 0,
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center'
+      }}>
+        <img src="/logo-master.png" alt="" style={{ width: '100%', height: 'auto' }} />
+      </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+      <header style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: '3rem',
+        flexWrap: 'wrap',
+        gap: '2.5rem',
+        background: 'rgba(255,255,255,0.7)',
+        padding: '2rem',
+        borderRadius: '40px',
+        backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(255,255,255,0.4)',
+        boxShadow: '0 20px 40px -10px rgba(0,0,0,0.03)',
+        position: 'relative',
+        zIndex: 1
+      }}>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+          gap: '2rem',
+          alignItems: 'center',
+          width: '100%',
+          maxWidth: '1000px'
+        }}>
+          {/* Passport Column */}
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <div
+              onClick={() => router.push('/store')}
+              style={{
+                background: '#f1f5f9', // Muted background instead of amber
+                padding: '1.2rem 1.8rem',
+                borderRadius: '24px',
+                boxShadow: '0 12px 35px rgba(0,0,0,0.04)',
+                border: '2px solid #cbd5e1', // Soft border
+                textAlign: 'left',
+                width: '100%',
+                maxWidth: '380px',
+                position: 'relative',
+                overflow: 'hidden',
+                display: 'flex',
+                gap: '1.5rem',
+                alignItems: 'center',
+                cursor: 'pointer',
+                transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                borderBottom: '7px solid #94a3b8' // Darker muted bottom
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.transform = 'translateY(-6px)';
+                e.currentTarget.style.borderColor = 'var(--secondary-color)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.borderColor = '#cbd5e1';
+              }}
+            >
+              <div style={{
+                position: 'absolute',
+                bottom: '-30px',
+                right: '-20px',
+                opacity: 0.05,
+                transform: 'rotate(-20deg)',
+                pointerEvents: 'none'
+              }}>
+                <img src="/cappycoin.png" alt="" style={{ width: '160px' }} />
+              </div>
+
+              <div style={{ position: 'relative' }}>
+                {user?.avatars?.afbeelding_url ? (
+                  <img
+                    src={user.avatars.afbeelding_url}
+                    alt="Avatar"
+                    style={{
+                      width: '90px',
+                      height: '90px',
+                      borderRadius: '14px',
+                      border: '4px solid #fff',
+                      background: '#fff',
+                      boxShadow: '0 4px 10px rgba(0,0,0,0.05)',
+                      objectFit: 'cover'
+                    }}
+                  />
+                ) : (
+                  <div style={{
+                    width: '90px',
+                    height: '90px',
+                    borderRadius: '14px',
+                    border: '4px solid #eee',
+                    background: '#f9f9f9',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#ccc',
+                    fontSize: '2rem'
+                  }}>
+                    ?
+                  </div>
+                )}
+                <div style={{
+                  position: 'absolute',
+                  bottom: '-8px',
+                  right: '-8px',
+                  background: 'var(--secondary-color)', // Muted blue instead of amber
+                  color: 'white',
+                  fontSize: '0.6rem',
+                  fontWeight: '900',
+                  padding: '3px 8px',
+                  borderRadius: '6px',
+                  transform: 'rotate(-12deg)',
+                  border: '2px solid white',
+                  boxShadow: '2px 2px 5px rgba(0,0,0,0.05)'
+                }}>
+                  GEKEURD
+                </div>
+              </div>
+
+              <div style={{ flex: 1, zIndex: 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <h3 style={{ margin: 0, fontSize: '1rem', color: 'var(--secondary-color)', textTransform: 'uppercase', letterSpacing: '3px', fontWeight: '900' }}>
+                    PASPOORT
+                  </h3>
+                  <Star size={18} color="var(--primary-color)" fill="var(--primary-color)" />
+                </div>
+
+                <div style={{ fontSize: '0.9rem', color: 'var(--text-color)', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                  <div style={{ borderBottom: '2px solid rgba(0, 0, 0, 0.05)', paddingBottom: '3px' }}>
+                    <span style={{ fontSize: '0.6rem', color: '#64748b', display: 'block', textTransform: 'uppercase', fontWeight: 'bold' }}>Naam</span>
+                    <strong style={{ fontSize: '1.2rem' }}>{user?.voornaam || 'Student'}</strong>
+                  </div>
+                  <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
+                    <div>
+                      <span style={{ fontSize: '0.6rem', color: '#64748b', display: 'block', textTransform: 'uppercase' }}>Games</span>
+                      <strong>{stats.totaal}</strong>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.6rem', color: '#64748b', display: 'block', textTransform: 'uppercase' }}>Gem. Score</span>
+                      <strong style={{ color: stats.gemiddelde >= 80 ? 'var(--success)' : 'inherit', fontSize: '1rem' }}>{stats.gemiddelde}%</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* New Simplified Action Column */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', justifyContent: 'center', alignItems: 'center' }}>
+            {/* Wallet */}
             <div
               onClick={() => router.push('/store')}
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.6rem',
+                gap: '0.8rem',
                 background: '#fff',
-                padding: '0.4rem 1rem',
+                padding: '1rem 2rem',
                 borderRadius: '30px',
-                boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
+                boxShadow: '0 8px 20px rgba(0,0,0,0.03)',
                 cursor: 'pointer',
-                transition: 'transform 0.2s',
-                border: '2px solid transparent'
+                transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                border: '2px solid #e2e8f0', // Soft border
+                minWidth: '150px',
+                justifyContent: 'center'
               }}
-              onMouseOver={(e) => { e.currentTarget.style.transform = 'scale(1.05)'; e.currentTarget.style.borderColor = 'var(--primary-color)'; }}
-              onMouseOut={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.borderColor = 'transparent'; }}
+              onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = 'var(--primary-color)'; }}
+              onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = '#e2e8f0'; }}
             >
-              <img src="/cappycoin.png" alt="Cappy" style={{ width: '24px', height: '24px' }} />
-              <span style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>{cappies}</span>
+              <img src="/cappycoin.png" alt="Cappy" style={{ width: '38px', height: '38px' }} />
+              <span style={{ fontWeight: '950', fontSize: '2rem', color: 'var(--text-color)' }}>{cappies}</span>
             </div>
 
+            {/* Tasks Button */}
             <button
               className={`btn btn-primary ${hasPendingTasks ? 'btn-pulse' : ''}`}
-              style={{ padding: '0.6rem 1.2rem', fontSize: '1rem' }}
+              style={{
+                padding: '1rem 2.5rem',
+                fontSize: '1.4rem',
+                borderRadius: '35px',
+                fontWeight: '900',
+                boxShadow: '0 12px 25px rgba(87, 142, 126, 0.2)', // Updated shadow color
+                minWidth: '220px'
+              }}
               onClick={() => router.push('/taken')}
             >
               Mijn taken
             </button>
-
-            <button
-              className="btn btn-outline"
-              style={{ padding: '0.6rem', borderRadius: '50%', minWidth: '42px', minHeight: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              onClick={logout}
-            >
-              <LogOut size={18} />
-            </button>
-          </div>
-
-
-          {/* Gecombineerd Capy-Paspoort */}
-          <div
-            onClick={() => router.push('/store')}
-            style={{
-              background: '#fef3c7', // Papier-achtig geel
-              padding: '1.5rem',
-              borderRadius: '20px',
-              boxShadow: '0 8px 20px rgba(0,0,0,0.1)',
-              border: '2px solid #d97706',
-              textAlign: 'left',
-              minWidth: '350px',
-              position: 'relative',
-              overflow: 'hidden',
-              display: 'flex',
-              gap: '1.5rem',
-              alignItems: 'center',
-              cursor: 'pointer',
-              transition: 'transform 0.2s',
-              borderBottom: '8px solid #d97706' // Extra dikke onderkant voor "boekje" effect
-            }}
-            onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-4px)'}
-            onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-          >
-            {/* Watermerk effect */}
-            <div style={{
-              position: 'absolute',
-              bottom: '-20px',
-              right: '-10px',
-              opacity: 0.1,
-              transform: 'rotate(-15deg)',
-              pointerEvents: 'none'
-            }}>
-              <img src="/cappycoin.png" alt="" style={{ width: '150px' }} />
-            </div>
-
-            {/* Pasfoto gedeelte */}
-            <div style={{ position: 'relative' }}>
-              {user?.avatars?.afbeelding_url ? (
-                <img
-                  src={user.avatars.afbeelding_url}
-                  alt="Je Avatar"
-                  style={{
-                    width: '100px',
-                    height: '100px',
-                    borderRadius: '10px', // Minder rond voor pasfoto effect
-                    border: '3px solid #fff',
-                    background: '#fff',
-                    boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
-                    objectFit: 'cover'
-                  }}
-                />
-              ) : (
-                <div style={{
-                  width: '100px',
-                  height: '100px',
-                  borderRadius: '10px',
-                  border: '3px solid #eee',
-                  background: '#f9f9f9',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#ccc',
-                  fontSize: '2rem',
-                  boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
-                }}>
-                  ?
-                </div>
-              )}
-              {/* Stempel effect over foto */}
-              <div style={{
-                position: 'absolute',
-                bottom: '-5px',
-                right: '-5px',
-                background: 'rgba(217, 119, 6, 0.8)',
-                color: 'white',
-                fontSize: '0.6rem',
-                fontWeight: 'bold',
-                padding: '2px 6px',
-                borderRadius: '5px',
-                transform: 'rotate(-10deg)',
-                border: '1px solid white'
-              }}>
-                GEKEURD
-              </div>
-            </div>
-
-            {/* Gegevens gedeelte */}
-            <div style={{ flex: 1, zIndex: 1 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <h3 style={{ margin: '0 0 0.8rem 0', fontSize: '1.2rem', color: '#92400e', textTransform: 'uppercase', letterSpacing: '2px', fontWeight: 'bold' }}>
-                  PASPOORT
-                </h3>
-                <Star size={20} color="#d97706" fill="#d97706" />
-              </div>
-
-              <div style={{ fontSize: '1rem', color: '#451a03', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                <p style={{ margin: 0, borderBottom: '1px solid rgba(217, 119, 6, 0.2)', paddingBottom: '2px' }}>
-                  <span style={{ fontSize: '0.7rem', color: '#b45309', display: 'block', textTransform: 'uppercase' }}>Naam</span>
-                  <strong>{user?.voornaam || 'Student'}</strong>
-                </p>
-                <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
-                  <p style={{ margin: 0 }}>
-                    <span style={{ fontSize: '0.7rem', color: '#b45309', display: 'block', textTransform: 'uppercase' }}>Oefeningen</span>
-                    <strong>{stats.totaal}</strong>
-                  </p>
-                  <p style={{ margin: 0 }}>
-                    <span style={{ fontSize: '0.7rem', color: '#b45309', display: 'block', textTransform: 'uppercase' }}>Gem. Score</span>
-                    <strong style={{ color: stats.gemiddelde >= 80 ? 'var(--success)' : 'inherit' }}>{stats.gemiddelde}%</strong>
-                  </p>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </header>
 
-      <main className="card">
-        <section className="section">
-          <label className="section-title">Hoe heet je?</label>
-          <input
-            type="text"
-            className="input-field"
-            placeholder="Je voornaam..."
-            value={staat.naam}
-            onChange={(e) => dispatch({ type: 'SET_NAAM', waarde: e.target.value })}
-          />
-        </section>
+      <main className="card" style={{
+        padding: '3rem',
+        position: 'relative',
+        zIndex: 1,
+        background: 'rgba(255,255,255,0.8)',
+        backdropFilter: 'blur(15px)',
+        borderRadius: '40px',
+        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.04)',
+        border: '1px solid rgba(255,255,255,0.5)'
+      }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2rem' }}>
+          <TestSettings staat={staat} dispatch={dispatch} />
+        </div>
 
-        <TestSettings staat={staat} dispatch={dispatch} />
-
-        <div style={{ marginTop: '3rem', display: 'flex', alignItems: 'center', gap: '2rem' }}>
-          <button className="btn btn-primary" style={{ fontSize: '2rem', padding: '1.5rem 4rem' }} onClick={startOefening}>
-            Start!
-          </button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#666' }}>
-            <span>Verdien tot:</span>
-            <img src="/cappycoin.png" alt="Cappy" style={{ width: '24px', height: '24px' }} />
-            <span style={{ fontWeight: 'bold', fontSize: '1.5rem', color: 'var(--primary-color)' }}>{berekenMaxCappies(staat)}</span>
+        <div style={{
+          marginTop: '4rem',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '1.8rem',
+          background: 'rgba(248, 250, 252, 0.4)',
+          padding: '3.5rem',
+          borderRadius: '35px',
+          border: '2px dashed #e2e8f0'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '1.4rem', color: '#64748b', fontWeight: '500' }}>Je kunt hiermee tot wel</span>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.8rem',
+              background: '#fff',
+              padding: '0.6rem 1.8rem',
+              borderRadius: '25px',
+              boxShadow: '0 10px 25px rgba(0,0,0,0.03)',
+              border: '2px solid rgba(87, 142, 126, 0.1)'
+            }}>
+              <img src="/cappycoin.png" alt="Cappy" style={{ width: '32px', height: '32px' }} />
+              <span style={{ fontWeight: '950', fontSize: '2.2rem', color: 'var(--primary-color)' }}>{berekenMaxCappies(staat)}</span>
+            </div>
+            <span style={{ fontSize: '1.4rem', color: '#64748b', fontWeight: '500' }}>cappies verdienen!</span>
           </div>
+
+          <button
+            className="btn btn-primary"
+            style={{
+              fontSize: '2.5rem',
+              padding: '1.5rem 8rem',
+              boxShadow: '0 20px 50px -5px rgba(87, 142, 126, 0.3)',
+              transform: 'translateY(0)',
+              transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.4)',
+              borderRadius: '60px',
+              fontWeight: '900',
+              textTransform: 'uppercase',
+              letterSpacing: '1px'
+            }}
+            onClick={startOefening}
+            onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-8px)'; e.currentTarget.style.boxShadow = '0 30px 60px -5px rgba(87, 142, 126, 0.4)'; }}
+            onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 20px 50px -5px rgba(87, 142, 126, 0.3)'; }}
+          >
+            Start de Oefening!
+          </button>
         </div>
       </main>
     </div>

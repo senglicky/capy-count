@@ -81,7 +81,7 @@ export default function NieuweTaak() {
 
     const slaOp = async () => {
         if (!titel) {
-            alert('Geef de toets een titel!');
+            alert('Geef de taak een titel!');
             return;
         }
         if (staat.geselecteerdeTafels.length === 0) {
@@ -125,7 +125,7 @@ export default function NieuweTaak() {
             <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <button className="btn btn-outline" onClick={() => router.push('/leraar/taken')}><ArrowLeft size={18} /></button>
-                    <h1 style={{ margin: 0 }}>Nieuwe Toets</h1>
+                    <h1 style={{ margin: 0 }}>Nieuwe Taak</h1>
                 </div>
                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#666', fontSize: '0.9rem' }}>
@@ -144,11 +144,11 @@ export default function NieuweTaak() {
 
             <main className="card">
                 <section className="section">
-                    <label className="section-title">Titel van de toets</label>
+                    <label className="section-title">Titel van de taak</label>
                     <input
                         type="text"
                         className="input-field"
-                        placeholder="Bijv: Weektoets Tafels 2, 5 en 10"
+                        placeholder="Bijv: Weektaak Tafels 2, 5 en 10"
                         value={titel}
                         onChange={(e) => setTitel(e.target.value)}
                     />

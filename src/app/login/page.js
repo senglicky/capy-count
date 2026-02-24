@@ -87,30 +87,53 @@ export default function Login() {
             alignItems: 'center',
             justifyContent: 'center',
             minHeight: '100vh',
-            padding: '2rem',
+            minHeight: '100dvh',
+            padding: '1rem',
             background: 'var(--background-color)'
         }}>
             <main className="card" style={{
                 display: 'flex',
-                flexDirection: 'row',
+                flexDirection: 'column',
                 padding: 0,
                 overflow: 'hidden',
-                width: '1200px',
-                height: '600px',
+                width: '100%',
+                maxWidth: '1000px',
+                minHeight: 'unset',
                 alignItems: 'stretch',
                 textAlign: 'left',
-                margin: 0
+                margin: '1rem'
             }}>
+                <style jsx>{`
+                    @media (min-width: 768px) {
+                        main {
+                            flex-direction: row !important;
+                            height: 600px;
+                        }
+                        .form-container {
+                            border-right: 1px solid #eee;
+                            border-bottom: none !important;
+                        }
+                        .logo-container {
+                            max-height: none !important;
+                        }
+                    }
+                    @media (max-height: 600px) and (max-width: 767px) {
+                        .logo-container {
+                            display: none !important;
+                        }
+                    }
+                `}</style>
+
                 {/* Linker kant: Formulier */}
-                <div style={{
+                <div className="form-container" style={{
                     flex: 1,
-                    padding: '3rem',
+                    padding: 'clamp(1.5rem, 5vw, 3rem)',
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'center',
-                    borderRight: '1px solid #eee'
+                    borderBottom: '1px solid #eee'
                 }}>
-                    <h1 style={{ textAlign: 'center', marginBottom: '2rem', color: 'var(--text-color)' }}>Inloggen</h1>
+                    <h1 style={{ textAlign: 'center', marginBottom: '1.5rem', color: 'var(--text-color)', fontSize: 'clamp(2rem, 5vw, 3rem)' }}>Inloggen</h1>
 
                     <div className="option-group" style={{ justifyContent: 'center', marginBottom: '2.5rem' }}>
                         {['student', 'leraar', 'admin'].map((r) => (
@@ -166,13 +189,14 @@ export default function Login() {
                 </div>
 
                 {/* Rechter kant: Logo */}
-                <div style={{
+                <div className="logo-container" style={{
                     flex: 1,
                     background: '#fcfcfc',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    overflow: 'hidden'
+                    overflow: 'hidden',
+                    maxHeight: '300px' // Limit logo height on mobile
                 }}>
                     <img
                         src="/logo-master.png"
