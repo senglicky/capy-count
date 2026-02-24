@@ -172,7 +172,7 @@ export default function Home() {
           {/* Passport Column */}
           <div style={{ display: 'flex', justifyContent: 'center' }}>
             <div
-              onClick={() => router.push('/store')}
+              onClick={() => router.push('/profiel')}
               style={{
                 background: '#f1f5f9', // Muted background instead of amber
                 padding: '1.2rem 1.8rem',
