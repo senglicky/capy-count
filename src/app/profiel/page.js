@@ -14,7 +14,11 @@ import {
     Search,
     Filter,
     BarChart3,
-    History
+    History,
+    ChevronDown,
+    ChevronUp,
+    CheckCircle,
+    XCircle
 } from 'lucide-react';
 
 export default function ProfielPagina() {
@@ -25,6 +29,12 @@ export default function ProfielPagina() {
     const [foutenPerTafel, setFoutenPerTafel] = useState({});
     const [tijdPerTafel, setTijdPerTafel] = useState({});
     const [topFouten, setTopFouten] = useState([]);
+
+    // Pagination & Expansion State
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
+    const [expandedOefeningId, setExpandedOefeningId] = useState(null);
+
     const router = useRouter();
 
     useEffect(() => {
@@ -193,6 +203,15 @@ export default function ProfielPagina() {
         );
     };
 
+    // Pagination Logic
+    const totalPages = Math.ceil(oefeningen.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const huidigeOefeningen = oefeningen.slice(startIndex, startIndex + itemsPerPage);
+
+    const getVragenVoorOefening = (oefeningId) => {
+        return vraagResultaten.filter(vr => vr.oefening_id === oefeningId);
+    };
+
     return (
         <div className="container" style={{ textAlign: 'left', paddingBottom: '5rem' }}>
             {/* Header */}
@@ -310,69 +329,190 @@ export default function ProfielPagina() {
                         </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            {oefeningen.length > 0 ? oefeningen.map((o) => (
-                                <div key={o.id} style={{
-                                    padding: '1.2rem',
-                                    borderRadius: '15px',
-                                    background: '#f8fafc',
-                                    border: '1px solid #e2e8f0',
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    transition: 'all 0.2s'
-                                }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
-                                        <div style={{
-                                            background: 'white',
-                                            width: '50px',
-                                            height: '50px',
-                                            borderRadius: '12px',
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            border: '1px solid #e2e8f0'
-                                        }}>
-                                            <span style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 'bold' }}>{new Date(o.datum).toLocaleDateString('nl-NL', { month: 'short' })}</span>
-                                            <span style={{ fontSize: '1.1rem', fontWeight: '900', color: 'var(--secondary-color)' }}>{new Date(o.datum).getDate()}</span>
-                                        </div>
-                                        <div>
-                                            <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{o.instellingen?.geselecteerdeTafels?.join(', ') ? `Tafels: ${o.instellingen.geselecteerdeTafels.join(', ')}` : 'Vrije oefening'}</div>
-                                            <div style={{ fontSize: '0.85rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.2rem' }}>
-                                                <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><Clock size={14} /> {Math.floor(o.totaal_tijd / 60)}m {o.totaal_tijd % 60}s</span>
-                                                <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><Target size={14} /> {o.score} / {o.instellingen?.aantalVragen || 10}</span>
-                                            </div>
-                                        </div>
-                                    </div>
+                            {huidigeOefeningen.length > 0 ? huidigeOefeningen.map((o) => {
+                                const isExpanded = expandedOefeningId === o.id;
+                                const details = getVragenVoorOefening(o.id);
 
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                                        <div style={{ textAlign: 'right' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', justifyContent: 'flex-end', color: 'var(--primary-color)', fontWeight: 'bold' }}>
-                                                <img src="/cappycoin.png" alt="" style={{ width: '18px' }} />
-                                                <span>+{o.verdiende_cappies || 0}</span>
+                                return (
+                                    <div key={o.id} style={{
+                                        borderRadius: '15px',
+                                        background: isExpanded ? 'white' : '#f8fafc',
+                                        border: isExpanded ? '2px solid var(--secondary-color)' : '1px solid #e2e8f0',
+                                        boxShadow: isExpanded ? '0 10px 25px rgba(61, 90, 128, 0.1)' : 'none',
+                                        transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                                        overflow: 'hidden'
+                                    }}>
+                                        {/* Header Row (Always Visible) */}
+                                        <div
+                                            onClick={() => setExpandedOefeningId(isExpanded ? null : o.id)}
+                                            style={{
+                                                padding: '1.2rem',
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
+                                                <div style={{
+                                                    background: isExpanded ? 'rgba(61, 90, 128, 0.05)' : 'white',
+                                                    width: '50px',
+                                                    height: '50px',
+                                                    borderRadius: '12px',
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    border: isExpanded ? 'none' : '1px solid #e2e8f0'
+                                                }}>
+                                                    <span style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 'bold' }}>{new Date(o.datum).toLocaleDateString('nl-NL', { month: 'short' })}</span>
+                                                    <span style={{ fontSize: '1.1rem', fontWeight: '900', color: 'var(--secondary-color)' }}>{new Date(o.datum).getDate()}</span>
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: isExpanded ? 'var(--secondary-color)' : 'inherit' }}>
+                                                        {o.instellingen?.geselecteerdeTafels?.join(', ') ? `Tafels: ${o.instellingen.geselecteerdeTafels.join(', ')}` : 'Vrije oefening'}
+                                                    </div>
+                                                    <div style={{ fontSize: '0.85rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.2rem' }}>
+                                                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><Clock size={14} /> {Math.floor(o.totaal_tijd / 60)}m {o.totaal_tijd % 60}s</span>
+                                                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><Target size={14} /> {o.score} / {o.instellingen?.aantalVragen || 10}</span>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div style={{
-                                                fontSize: '0.75rem',
-                                                padding: '2px 8px',
-                                                borderRadius: '8px',
-                                                background: o.score / (o.instellingen?.aantalVragen || 10) >= 0.8 ? 'rgba(132, 169, 140, 0.1)' : 'rgba(229, 152, 155, 0.1)',
-                                                color: o.score / (o.instellingen?.aantalVragen || 10) >= 0.8 ? 'var(--primary-color)' : 'var(--error)',
-                                                fontWeight: 'bold',
-                                                marginTop: '0.4rem'
-                                            }}>
-                                                {Math.round((o.score / (o.instellingen?.aantalVragen || 10)) * 100)}%
+
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                                                <div style={{ textAlign: 'right' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', justifyContent: 'flex-end', color: 'var(--primary-color)', fontWeight: 'bold' }}>
+                                                        <img src="/cappycoin.png" alt="" style={{ width: '18px' }} />
+                                                        <span>+{o.verdiende_cappies || 0}</span>
+                                                    </div>
+                                                    <div style={{
+                                                        fontSize: '0.75rem',
+                                                        padding: '2px 8px',
+                                                        borderRadius: '8px',
+                                                        background: o.score / (o.instellingen?.aantalVragen || 10) >= 0.8 ? 'rgba(132, 169, 140, 0.1)' : 'rgba(229, 152, 155, 0.1)',
+                                                        color: o.score / (o.instellingen?.aantalVragen || 10) >= 0.8 ? 'var(--primary-color)' : 'var(--error)',
+                                                        fontWeight: 'bold',
+                                                        marginTop: '0.4rem'
+                                                    }}>
+                                                        {Math.round((o.score / (o.instellingen?.aantalVragen || 10)) * 100)}%
+                                                    </div>
+                                                </div>
+                                                <div style={{
+                                                    background: isExpanded ? 'var(--secondary-color)' : 'white',
+                                                    color: isExpanded ? 'white' : '#cbd5e1',
+                                                    borderRadius: '50%',
+                                                    padding: '4px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    border: isExpanded ? 'none' : '1px solid #e2e8f0'
+                                                }}>
+                                                    {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                                </div>
                                             </div>
                                         </div>
-                                        <ArrowRight size={20} color="#cbd5e1" />
+
+                                        {/* Expandable Details Row */}
+                                        {isExpanded && (
+                                            <div style={{
+                                                padding: '1.5rem',
+                                                background: '#f8fafc',
+                                                borderTop: '1px solid #e2e8f0',
+                                                display: 'grid',
+                                                gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
+                                                gap: '1rem'
+                                            }}>
+                                                {details.map((v, i) => (
+                                                    <div key={i} style={{
+                                                        background: 'white',
+                                                        padding: '0.8rem',
+                                                        borderRadius: '10px',
+                                                        border: `1px solid ${v.is_correct ? 'rgba(132, 169, 140, 0.3)' : 'rgba(229, 152, 155, 0.3)'}`,
+                                                        display: 'flex',
+                                                        flexDirection: 'column',
+                                                        alignItems: 'center',
+                                                        gap: '0.5rem',
+                                                        boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                                                    }}>
+                                                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text-color)' }}>
+                                                            {v.vraag}
+                                                        </div>
+                                                        <div style={{
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '0.5rem',
+                                                            fontSize: '1rem',
+                                                            fontWeight: '900',
+                                                            color: v.is_correct ? 'var(--primary-color)' : 'var(--error)'
+                                                        }}>
+                                                            {v.is_correct ? <CheckCircle size={16} /> : <XCircle size={16} />}
+                                                            {v.antwoord_gegeven}
+                                                        </div>
+                                                        {!v.is_correct && (
+                                                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                                                                (Corr: {eval(v.vraag.replace('x', '*').replace(':', '/'))})
+                                                            </div>
+                                                        )}
+                                                        <div style={{ fontSize: '0.7rem', color: '#cbd5e1' }}>
+                                                            {v.tijd_ms ? (v.tijd_ms / 1000).toFixed(1) + 's' : '-'}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                                {details.length === 0 && (
+                                                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#94a3b8', padding: '1rem' }}>
+                                                        Geen detailresultaten beschikbaar voor deze oefening.
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
-                                </div>
-                            )) : (
+                                );
+                            }) : (
                                 <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>
                                     <History size={48} style={{ opacity: 0.2, marginBottom: '1rem' }} />
                                     <p>Nog geen oefeningen gemaakt. Start vandaag nog!</p>
                                 </div>
                             )}
                         </div>
+
+                        {/* Pagination Controls */}
+                        {totalPages > 1 && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}>
+                                <button
+                                    className="btn"
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    disabled={currentPage === 1}
+                                    style={{
+                                        padding: '0.6rem 1.2rem',
+                                        borderRadius: '10px',
+                                        background: currentPage === 1 ? '#f1f5f9' : 'white',
+                                        color: currentPage === 1 ? '#cbd5e1' : 'var(--text-color)',
+                                        border: '1px solid #e2e8f0',
+                                        cursor: currentPage === 1 ? 'not-allowed' : 'pointer'
+                                    }}
+                                >
+                                    Vorige
+                                </button>
+                                <div style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: '600' }}>
+                                    Pagina {currentPage} van {totalPages}
+                                </div>
+                                <button
+                                    className="btn"
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                    disabled={currentPage === totalPages}
+                                    style={{
+                                        padding: '0.6rem 1.2rem',
+                                        borderRadius: '10px',
+                                        background: currentPage === totalPages ? '#f1f5f9' : 'var(--secondary-color)',
+                                        color: currentPage === totalPages ? '#cbd5e1' : 'white',
+                                        border: currentPage === totalPages ? '1px solid #e2e8f0' : 'none',
+                                        cursor: currentPage === totalPages ? 'not-allowed' : 'pointer'
+                                    }}
+                                >
+                                    Volgende
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
