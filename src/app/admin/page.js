@@ -3,14 +3,14 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import Papa from 'papaparse';
-import { Plus, Users, School, Upload, Trash2, LogOut, ShoppingBag, Edit2, Eye, EyeOff } from 'lucide-react';
+import { Plus, Users, School, Upload, Trash2, LogOut, ShoppingBag, Edit2, Eye, EyeOff, Key } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function AdminDashboard() {
     const [klassen, setKlassen] = useState([]);
     const [leraren, setLeraren] = useState([]);
     const [nieuweKlasNaam, setNieuweKlasNaam] = useState('');
-    const [tab, setTab] = useState('klassen'); // klassen, leraren, leerlingen, store
+    const [tab, setTab] = useState('klassen'); // klassen, leraren, leerlingen, store, instellingen
     const [laden, setLaden] = useState(true);
     const router = useRouter();
 
@@ -80,6 +80,9 @@ export default function AdminDashboard() {
                 <button className={`btn btn-outline ${tab === 'store' ? 'active' : ''}`} onClick={() => setTab('store')}>
                     <ShoppingBag size={20} /> Cappy Store
                 </button>
+                <button className={`btn btn-outline ${tab === 'instellingen' ? 'active' : ''}`} onClick={() => setTab('instellingen')}>
+                    <Key size={20} /> Instellingen
+                </button>
             </div>
 
             <main className="card">
@@ -138,6 +141,12 @@ export default function AdminDashboard() {
                     <section>
                         <h2>Cappy Store Beheer</h2>
                         <StoreManagement />
+                    </section>
+                )}
+                {tab === 'instellingen' && (
+                    <section>
+                        <h2>Instellingen</h2>
+                        <Settings />
                     </section>
                 )}
             </main>
@@ -663,6 +672,89 @@ function StoreManagement() {
                     </div>
                 ))}
             </div>
+        </div>
+    );
+}
+function Settings() {
+    const [nieuwWachtwoord, setNieuwWachtwoord] = useState('');
+    const [bevestigWachtwoord, setBevestigWachtwoord] = useState('');
+    const [bezig, setBezig] = useState(false);
+    const [bericht, setBericht] = useState({ type: '', tekst: '' });
+
+    const wijzigWachtwoord = async (e) => {
+        e.preventDefault();
+        setBericht({ type: '', tekst: '' });
+
+        if (nieuwWachtwoord !== bevestigWachtwoord) {
+            setBericht({ type: 'error', tekst: 'Wachtwoorden komen niet overeen.' });
+            return;
+        }
+
+        if (nieuwWachtwoord.length < 6) {
+            setBericht({ type: 'error', tekst: 'Wachtwoord moet minimaal 6 tekens lang zijn.' });
+            return;
+        }
+
+        setBezig(true);
+        const { error } = await supabase.auth.updateUser({ password: nieuwWachtwoord });
+
+        if (error) {
+            setBericht({ type: 'error', tekst: 'Fout bij bijwerken: ' + error.message });
+        } else {
+            setBericht({ type: 'success', tekst: 'Wachtwoord succesvol bijgewerkt!' });
+            setNieuwWachtwoord('');
+            setBevestigWachtwoord('');
+        }
+        setBezig(false);
+    };
+
+    return (
+        <div className="card" style={{ maxWidth: '400px', margin: '0 auto' }}>
+            <h3>Wachtwoord wijzigen</h3>
+            <form onSubmit={wijzigWachtwoord}>
+                <div className="section" style={{ marginBottom: '1rem' }}>
+                    <label className="section-title" style={{ fontSize: '1rem' }}>Nieuw Wachtwoord</label>
+                    <input
+                        type="password"
+                        className="input-field"
+                        value={nieuwWachtwoord}
+                        onChange={(e) => setNieuwWachtwoord(e.target.value)}
+                        required
+                        style={{ fontSize: '1.1rem', padding: '0.8rem' }}
+                    />
+                </div>
+                <div className="section" style={{ marginBottom: '1.5rem' }}>
+                    <label className="section-title" style={{ fontSize: '1rem' }}>Bevestig Wachtwoord</label>
+                    <input
+                        type="password"
+                        className="input-field"
+                        value={bevestigWachtwoord}
+                        onChange={(e) => setBevestigWachtwoord(e.target.value)}
+                        required
+                        style={{ fontSize: '1.1rem', padding: '0.8rem' }}
+                    />
+                </div>
+
+                {bericht.tekst && (
+                    <p style={{
+                        color: bericht.type === 'success' ? 'var(--success)' : 'var(--error)',
+                        marginBottom: '1rem',
+                        fontWeight: '600',
+                        textAlign: 'center'
+                    }}>
+                        {bericht.tekst}
+                    </p>
+                )}
+
+                <button
+                    type="submit"
+                    className="btn btn-primary"
+                    style={{ width: '100%' }}
+                    disabled={bezig}
+                >
+                    {bezig ? 'Verwerken...' : 'Wachtwoord bijwerken'}
+                </button>
+            </form>
         </div>
     );
 }

@@ -27,8 +27,13 @@ export default function ProfielPagina() {
     const [vraagResultaten, setVraagResultaten] = useState([]);
     const [laden, setLaden] = useState(true);
     const [foutenPerTafel, setFoutenPerTafel] = useState({});
+    const [foutenInclusiefEersteKans, setFoutenInclusiefEersteKans] = useState({});
     const [tijdPerTafel, setTijdPerTafel] = useState({});
     const [topFouten, setTopFouten] = useState([]);
+    const [tweedeKansStats, setTweedeKansStats] = useState({ totaal: 0, succes: 0 });
+    const [filterBereik, setFilterBereik] = useState('all'); // all, 30, 7
+    const [alleOefeningen, setAlleOefeningen] = useState([]);
+    const [alleVraagResultaten, setAlleVraagResultaten] = useState([]);
 
     // Pagination & Expansion State
     const [currentPage, setCurrentPage] = useState(1);
@@ -48,6 +53,12 @@ export default function ProfielPagina() {
         }
     }, []);
 
+    useEffect(() => {
+        if (user) {
+            filterEnAnalyseer();
+        }
+    }, [filterBereik, alleOefeningen, alleVraagResultaten]);
+
     const haalData = async (userId) => {
         setLaden(true);
 
@@ -61,7 +72,7 @@ export default function ProfielPagina() {
         if (oefError) {
             console.error('Fout bij ophalen oefeningen:', oefError);
         } else {
-            setOefeningen(oefeningenData || []);
+            setAlleOefeningen(oefeningenData || []);
         }
 
         // 2. Haal alle vraag resultaten op (voor analyse)
@@ -77,18 +88,43 @@ export default function ProfielPagina() {
             if (resError) {
                 console.error('Fout bij ophalen resultaten:', resError);
             } else {
-                setVraagResultaten(resultatenData || []);
-                analyseerData(resultatenData || []);
+                setAlleVraagResultaten(resultatenData || []);
             }
         }
 
         setLaden(false);
     };
 
+    const filterEnAnalyseer = () => {
+        let gefilterdeOefeningen = [...alleOefeningen];
+
+        if (filterBereik === '30') {
+            const dertigDagenGeleden = new Date();
+            dertigDagenGeleden.setDate(dertigDagenGeleden.getDate() - 30);
+            gefilterdeOefeningen = alleOefeningen.filter(o => new Date(o.datum) >= dertigDagenGeleden);
+        } else if (filterBereik === '7') {
+            const zevenDagenGeleden = new Date();
+            zevenDagenGeleden.setDate(zevenDagenGeleden.getDate() - 7);
+            gefilterdeOefeningen = alleOefeningen.filter(o => new Date(o.datum) >= zevenDagenGeleden);
+        }
+
+        setOefeningen(gefilterdeOefeningen);
+
+        const oefeningIds = gefilterdeOefeningen.map(o => o.id);
+        const gefilterdeResultaten = alleVraagResultaten.filter(r => oefeningIds.includes(r.oefening_id));
+
+        setVraagResultaten(gefilterdeResultaten);
+        analyseerData(gefilterdeResultaten);
+        setCurrentPage(1); // Reset pagination
+    };
+
     const analyseerData = (data) => {
         const fouten = {};
+        const foutenInclusief = {};
         const tijden = {};
         const vraagFrequenties = {};
+        let tkTotaal = 0;
+        let tkSucces = 0;
 
         data.forEach(item => {
             // Extraheer de tafel uit de vraag (bv "5 x 7" -> 7 is de tafel, "35 : 7" -> 7 is de tafel)
@@ -96,18 +132,27 @@ export default function ProfielPagina() {
             const tafel = onderdelen[2]; // De tafel staat op index 2
 
             if (tafel) {
-                // Fouten tellen
+                // Fouten tellen (alleen uiteindelijke fouten)
                 if (!item.is_correct) {
                     fouten[tafel] = (fouten[tafel] || 0) + 1;
-
-                    // Specifieke vragen tellen
                     vraagFrequenties[item.vraag] = (vraagFrequenties[item.vraag] || 0) + 1;
+                }
+
+                // Inclusief eerste kans fouten
+                if (!item.is_correct || item.pogingen === 2) {
+                    foutenInclusief[tafel] = (foutenInclusief[tafel] || 0) + 1;
                 }
 
                 // Tijden bijhouden voor gemiddelde
                 if (!tijden[tafel]) tijden[tafel] = { totaal: 0, aantal: 0 };
                 tijden[tafel].totaal += item.tijd_ms || 0;
                 tijden[tafel].aantal += 1;
+            }
+
+            // Tweede kans analyse
+            if (item.pogingen === 2) {
+                tkTotaal++;
+                if (item.is_correct) tkSucces++;
             }
         });
 
@@ -124,8 +169,10 @@ export default function ProfielPagina() {
             .map(([vraag, aantal]) => ({ vraag, aantal }));
 
         setFoutenPerTafel(fouten);
+        setFoutenInclusiefEersteKans(foutenInclusief);
         setTijdPerTafel(gemiddeldeTijden);
         setTopFouten(gesorteerdeFouten);
+        setTweedeKansStats({ totaal: tkTotaal, succes: tkSucces });
     };
 
     if (laden) {
@@ -240,6 +287,64 @@ export default function ProfielPagina() {
                 <div style={{ width: '80px' }}></div> {/* Spacer */}
             </div>
 
+            {/* Range Filter */}
+            <div style={{
+                display: 'inline-flex',
+                background: '#e2e8f0',
+                padding: '4px',
+                borderRadius: '12px',
+                marginBottom: '2rem'
+            }}>
+                <button
+                    onClick={() => setFilterBereik('all')}
+                    style={{
+                        padding: '0.5rem 1.5rem',
+                        borderRadius: '10px',
+                        border: 'none',
+                        background: filterBereik === 'all' ? 'white' : 'transparent',
+                        color: filterBereik === 'all' ? 'var(--text-color)' : '#64748b',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        boxShadow: filterBereik === 'all' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
+                        transition: 'all 0.2s'
+                    }}
+                >
+                    Alle tijd
+                </button>
+                <button
+                    onClick={() => setFilterBereik('30')}
+                    style={{
+                        padding: '0.5rem 1.5rem',
+                        borderRadius: '10px',
+                        border: 'none',
+                        background: filterBereik === '30' ? 'white' : 'transparent',
+                        color: filterBereik === '30' ? 'var(--text-color)' : '#64748b',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        boxShadow: filterBereik === '30' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
+                        transition: 'all 0.2s'
+                    }}
+                >
+                    30 dagen
+                </button>
+                <button
+                    onClick={() => setFilterBereik('7')}
+                    style={{
+                        padding: '0.5rem 1.5rem',
+                        borderRadius: '10px',
+                        border: 'none',
+                        background: filterBereik === '7' ? 'white' : 'transparent',
+                        color: filterBereik === '7' ? 'var(--text-color)' : '#64748b',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        boxShadow: filterBereik === '7' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
+                        transition: 'all 0.2s'
+                    }}
+                >
+                    7 dagen
+                </button>
+            </div>
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '2rem', alignItems: 'start' }}>
                 {/* Links: Stats & Info */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -268,6 +373,18 @@ export default function ProfielPagina() {
                                 <strong style={{ fontSize: '1.4rem', color: 'var(--secondary-color)' }}>{user?.cappies || 0}</strong>
                             </div>
                         </div>
+
+                        {tweedeKansStats.totaal > 0 && (
+                            <div style={{ background: 'rgba(132, 169, 140, 0.05)', padding: '1rem', borderRadius: '15px', marginTop: '1rem' }}>
+                                <span style={{ display: 'block', fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 'bold' }}>Tweede Kans Succes</span>
+                                <strong style={{ fontSize: '1.4rem', color: 'var(--primary-color)' }}>
+                                    {Math.round((tweedeKansStats.succes / tweedeKansStats.totaal) * 100)}%
+                                </strong>
+                                <span style={{ fontSize: '0.8rem', color: '#64748b', marginLeft: '0.5rem' }}>
+                                    ({tweedeKansStats.succes}/{tweedeKansStats.totaal})
+                                </span>
+                            </div>
+                        )}
 
                         <button
                             className="btn btn-secondary"
@@ -318,6 +435,15 @@ export default function ProfielPagina() {
                             </div>
                             <BarChart data={tijdPerTafel} />
                             <div style={{ textAlign: 'center', fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.5rem' }}>Tafels 1 t/m 10</div>
+                        </div>
+
+                        <div className="card" style={{ padding: '1.5rem', margin: 0, gridColumn: 'span 2' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginBottom: '1.5rem' }}>
+                                <TrendingUp color="var(--error)" size={20} />
+                                <h3 style={{ margin: 0, fontSize: '1rem' }}>Fouten per Tafel (inclusief 1ste kans fouten)</h3>
+                            </div>
+                            <LineChart data={foutenInclusiefEersteKans} />
+                            <div style={{ textAlign: 'center', fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.5rem' }}>Alle pogingen inclusief 1ste kans</div>
                         </div>
                     </div>
 
@@ -439,14 +565,25 @@ export default function ProfielPagina() {
                                                         </div>
                                                         <div style={{
                                                             display: 'flex',
+                                                            flexDirection: 'column',
                                                             alignItems: 'center',
-                                                            gap: '0.5rem',
-                                                            fontSize: '1rem',
+                                                            gap: '0.2rem',
                                                             fontWeight: '900',
                                                             color: v.is_correct ? 'var(--primary-color)' : 'var(--error)'
                                                         }}>
-                                                            {v.is_correct ? <CheckCircle size={16} /> : <XCircle size={16} />}
-                                                            {v.antwoord_gegeven}
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                                {v.is_correct ? <CheckCircle size={16} /> : <XCircle size={16} />}
+                                                                {v.pogingen === 2 ? (
+                                                                    <span style={{ fontSize: '0.9rem' }}>{v.antwoord_gegeven} (2e)</span>
+                                                                ) : (
+                                                                    v.antwoord_gegeven
+                                                                )}
+                                                            </div>
+                                                            {v.eerste_antwoord && (
+                                                                <div style={{ fontSize: '0.7rem', color: 'var(--error)', textDecoration: 'line-through' }}>
+                                                                    1e: {v.eerste_antwoord}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                         {!v.is_correct && (
                                                             <div style={{ fontSize: '0.75rem', color: '#64748b' }}>

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { berekenMaxCappies, berekenVerdiendeCappies } from '@/utils/cappy-utils';
+import { genereerVragenLijstV3 } from '@/utils/question-generator-v3';
 
 export default function Game({ instellingen, opStop }) {
     const [vragen, setVragen] = useState([]);
@@ -14,6 +15,7 @@ export default function Game({ instellingen, opStop }) {
     const [status, setStatus] = useState('laden'); // laden, spelen, resultaten
     const [tijd, setTijd] = useState(0);
     const [isTweedeKans, setIsTweedeKans] = useState(false);
+    const [eersteAntwoord, setEersteAntwoord] = useState(null);
     const [vraagStartTime, setVraagStartTime] = useState(Date.now());
     const [vraagResultaten, setVraagResultaten] = useState([]);
     const [bezigMetOpslaan, setBezigMetOpslaan] = useState(false);
@@ -28,32 +30,8 @@ export default function Game({ instellingen, opStop }) {
             // Gebruik de vragen die de leraar heeft klaargezet
             setVragen(instellingen.vragen);
         } else {
-            // Genereer willekeurige vragen (vrije oefening)
-            const nieuweVragen = [];
-            const deTafels = instellingen.geselecteerdeTafels;
-
-            for (let i = 0; i < instellingen.aantalVragen; i++) {
-                const tafel = deTafels[Math.floor(Math.random() * deTafels.length)];
-                const vermenigvuldiger = Math.floor(Math.random() * instellingen.bereik) + 1;
-
-                let type = instellingen.operaties === 'beide'
-                    ? (Math.random() > 0.5 ? 'maal' : 'deel')
-                    : instellingen.operaties;
-
-                let vraagTekst = '';
-                let correctAntwoord = 0;
-
-                if (type === 'maal') {
-                    vraagTekst = `${vermenigvuldiger} x ${tafel}`;
-                    correctAntwoord = vermenigvuldiger * tafel;
-                } else {
-                    const product = vermenigvuldiger * tafel;
-                    vraagTekst = `${product} : ${tafel}`;
-                    correctAntwoord = vermenigvuldiger;
-                }
-
-                nieuweVragen.push({ vraag: vraagTekst, antwoord: correctAntwoord, type });
-            }
+            // Genereer unieke vragen (vrije oefening) middels de centrale utility
+            const nieuweVragen = genereerVragenLijstV3(instellingen);
             setVragen(nieuweVragen);
         }
 
@@ -95,6 +73,7 @@ export default function Game({ instellingen, opStop }) {
         const resultaat = {
             vraag: huidig.vraag,
             antwoord_gegeven: antwoord,
+            eerste_antwoord: eersteAntwoord,
             tijd_ms: tijdMs,
             pogingen: isTweedeKans ? 2 : 1,
             is_correct: ingevoerd === huidig.antwoord
@@ -111,10 +90,11 @@ export default function Game({ instellingen, opStop }) {
             if (instellingen.correctie === 'direct' && !isTweedeKans) {
                 setFoutmelding('Niet helemaal goed. Probeer het nog een keer!');
                 setIsTweedeKans(true);
+                setEersteAntwoord(antwoord);
                 setAntwoord('');
             } else {
                 // Definitief fout
-                setFouten([...fouten, { ...huidig, jouwAntwoord: antwoord }]);
+                setFouten([...fouten, { ...huidig, jouwAntwoord: antwoord, eersteAntwoord: eersteAntwoord }]);
                 const nieuweResultaten = [...vraagResultaten, resultaat];
                 setVraagResultaten(nieuweResultaten);
                 verderNaarVolgende(nieuweResultaten, score);
@@ -141,6 +121,7 @@ export default function Game({ instellingen, opStop }) {
         setAntwoord('');
         setFoutmelding('');
         setIsTweedeKans(false);
+        setEersteAntwoord(null);
         setVraagStartTime(Date.now());
 
         if (huidigeIndex + 1 < vragen.length) {
@@ -267,11 +248,21 @@ export default function Game({ instellingen, opStop }) {
                             <h3 style={{ color: 'var(--error)', fontSize: '1rem', marginBottom: '1rem' }}>Deze vonden we moeilijk:</h3>
                             <ul style={{ listStyle: 'none', padding: 0, marginTop: '0.5rem' }}>
                                 {fouten.map((f, i) => (
-                                    <li key={i} style={{ padding: '0.6rem 0', fontSize: '1.1rem', borderBottom: '1px solid rgba(0,0,0,0.05)', display: 'flex', justifyContent: 'space-between' }}>
-                                        <span>{f.vraag} = <span style={{ color: 'var(--success)', fontWeight: 'bold' }}>{f.antwoord}</span></span>
-                                        <span style={{ fontSize: '0.9rem', color: '#94a3b8' }}>
-                                            Jouw antwoord: {f.jouwAntwoord}
-                                        </span>
+                                    <li key={i} style={{ padding: '0.6rem 0', fontSize: '1.1rem', borderBottom: '1px solid rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <span>{f.vraag} = <span style={{ color: 'var(--success)', fontWeight: 'bold' }}>{f.antwoord}</span></span>
+                                        </div>
+                                        <div style={{ fontSize: '0.9rem', color: '#94a3b8', marginTop: '0.2rem' }}>
+                                            {f.eersteAntwoord ? (
+                                                <>
+                                                    <span style={{ color: 'var(--error)' }}>Poging 1: {f.eersteAntwoord}</span>
+                                                    <span style={{ margin: '0 0.5rem' }}>|</span>
+                                                    <span style={{ color: 'var(--error)' }}>Poging 2: {f.jouwAntwoord}</span>
+                                                </>
+                                            ) : (
+                                                <span>Jouw antwoord: {f.jouwAntwoord}</span>
+                                            )}
+                                        </div>
                                     </li>
                                 ))}
                             </ul>

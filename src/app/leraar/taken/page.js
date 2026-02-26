@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { Plus, Trash2, ArrowLeft, BookOpen, Clock, Target, FileText } from 'lucide-react';
-import { printTaakPDF } from '@/utils/pdf-generator';
+import { printTaakPDFV3 } from '@/utils/pdf-generator-v3';
 
 export default function LeraarTaken() {
     const [taken, setTaken] = useState([]);
@@ -98,7 +98,7 @@ export default function LeraarTaken() {
                                 </div>
                             </div>
                             <div style={{ display: 'flex', gap: '1rem' }}>
-                                <button className="btn btn-outline" title="Printen" onClick={() => printTaakPDF(t.titel, t.vragen)}>
+                                <button className="btn btn-outline" title="Printen" onClick={() => printTaakPDFV3(t.titel, t.vragen)}>
                                     <FileText size={18} />
                                 </button>
                                 <button className="btn btn-outline" style={{ color: 'var(--error)' }} onClick={() => verwijderTaak(t.id)}>

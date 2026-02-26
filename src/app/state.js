@@ -14,20 +14,37 @@ const initiëleStaat = {
 };
 
 function reducer(staat, actie) {
+  // Validatie functie om te zorgen dat het aantal vragen past bij het aantal tafels
+  const valideerAantalVragen = (tafelsLijst, huidigAantal) => {
+    const aantalTafels = tafelsLijst.length;
+    if (huidigAantal === 50 && aantalTafels < 5) return 30; // Downgrade naar 30 als < 5 tafels
+    if (huidigAantal >= 30 && aantalTafels < 3) return 20; // Downgrade naar 20 als < 3 tafels
+    if (huidigAantal >= 20 && aantalTafels < 2) return 10; // Downgrade naar 10 als < 2 tafels
+    return huidigAantal;
+  };
+
   switch (actie.type) {
     case "SET_NAAM":
       return { ...staat, naam: actie.waarde };
     case "TOGGLE_TAFEL":
-      const tafels = staat.geselecteerdeTafels.includes(actie.waarde)
+      const nieuweTafels = staat.geselecteerdeTafels.includes(actie.waarde)
         ? staat.geselecteerdeTafels.filter((t) => t !== actie.waarde)
         : [...staat.geselecteerdeTafels, actie.waarde];
-      return { ...staat, geselecteerdeTafels: tafels.sort((a, b) => a - b) };
+
+      const gesorteerdeTafels = nieuweTafels.sort((a, b) => a - b);
+      return {
+        ...staat,
+        geselecteerdeTafels: gesorteerdeTafels,
+        aantalVragen: valideerAantalVragen(gesorteerdeTafels, staat.aantalVragen)
+      };
     case "SELECT_ALLE_TAFELS":
       const alleTafels = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
       const zijnAllemaalGeselecteerd = staat.geselecteerdeTafels.length === alleTafels.length;
+      const geselecteerd = zijnAllemaalGeselecteerd ? [] : alleTafels;
       return {
         ...staat,
-        geselecteerdeTafels: zijnAllemaalGeselecteerd ? [] : alleTafels
+        geselecteerdeTafels: geselecteerd,
+        aantalVragen: valideerAantalVragen(geselecteerd, staat.aantalVragen)
       };
     case "SET_MODUS":
       return { ...staat, modus: actie.waarde };
@@ -38,7 +55,8 @@ function reducer(staat, actie) {
     case "SET_CORRECTIE":
       return { ...staat, correctie: actie.waarde };
     case "SET_AANTAL":
-      return { ...staat, aantalVragen: actie.waarde };
+      // Directe controle bij het handmatig instellen
+      return { ...staat, aantalVragen: valideerAantalVragen(staat.geselecteerdeTafels, actie.waarde) };
     default:
       return staat;
   }

@@ -116,16 +116,45 @@ export default function TestSettings({ staat, dispatch }) {
                     <section className="section">
                         <label className="section-title">Hoeveel vragen?</label>
                         <div className="option-group" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}>
-                            {[10, 20, 30, 50].map((n) => (
-                                <button
-                                    key={n}
-                                    className={`btn btn-outline ${staat.aantalVragen === n ? 'active' : ''}`}
-                                    onClick={() => dispatch({ type: 'SET_AANTAL', waarde: n })}
-                                    style={{ padding: '0.8rem 0.2rem' }}
-                                >
-                                    {n}
-                                </button>
-                            ))}
+                            {[10, 20, 30, 50].map((n) => {
+                                const aantalTafels = staat.geselecteerdeTafels.length;
+                                let isDisabled = false;
+                                let hint = "";
+
+                                if (n === 50 && aantalTafels < 5) {
+                                    isDisabled = true;
+                                    hint = "Min. 5";
+                                } else if (n === 30 && aantalTafels < 3) {
+                                    isDisabled = true;
+                                    hint = "Min. 3";
+                                } else if (n === 20 && aantalTafels < 2) {
+                                    isDisabled = true;
+                                    hint = "Min. 2";
+                                }
+
+                                return (
+                                    <div key={n} style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                                        <button
+                                            className={`btn btn-outline ${staat.aantalVragen === n ? 'active' : ''}`}
+                                            onClick={() => !isDisabled && dispatch({ type: 'SET_AANTAL', waarde: n })}
+                                            disabled={isDisabled}
+                                            style={{
+                                                padding: '0.8rem 0.2rem',
+                                                opacity: isDisabled ? 0.5 : 1,
+                                                cursor: isDisabled ? 'not-allowed' : 'pointer',
+                                                fontSize: '1.1rem'
+                                            }}
+                                        >
+                                            {n}
+                                        </button>
+                                        {isDisabled && (
+                                            <span style={{ fontSize: '0.65rem', color: '#94a3b8', textAlign: 'center', fontWeight: '600' }}>
+                                                {hint} tafels
+                                            </span>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
                     </section>
                 </div>

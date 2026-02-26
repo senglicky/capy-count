@@ -6,8 +6,9 @@ import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, FileText } from 'lucide-react';
 import TestSettings from '@/components/TestSettings';
-import { printTaakPDF } from '@/utils/pdf-generator';
+import { printTaakPDFV3 } from '@/utils/pdf-generator-v3';
 import { berekenMaxCappies } from '@/utils/cappy-utils';
+import { genereerVragenLijstV3 } from '@/utils/question-generator-v3';
 
 export default function NieuweTaak() {
     const [staat, dispatch] = useReducer(reducer, initiëleStaat);
@@ -48,37 +49,6 @@ export default function NieuweTaak() {
         setLaden(false);
     };
 
-    const genereerVragenLijst = () => {
-        const vragen = [];
-        const tafels = staat.geselecteerdeTafels;
-        const operaties = staat.operaties;
-        const bereik = staat.bereik;
-        const aantal = staat.aantalVragen;
-
-        for (let i = 0; i < aantal; i++) {
-            const tafel = tafels[Math.floor(Math.random() * tafels.length)];
-            const getal = Math.floor(Math.random() * bereik) + 1;
-            const isDeel = operaties === 'beide' && Math.random() > 0.5;
-
-            let vraagTekst = '';
-            let correctAntwoord = 0;
-            let type = '';
-
-            if (isDeel) {
-                const product = tafel * getal;
-                vraagTekst = `${product} : ${tafel}`;
-                correctAntwoord = getal;
-                type = 'deel';
-            } else {
-                vraagTekst = `${getal} x ${tafel}`;
-                correctAntwoord = getal * tafel;
-                type = 'maal';
-            }
-            vragen.push({ vraag: vraagTekst, antwoord: correctAntwoord, type });
-        }
-        return vragen;
-    };
-
     const slaOp = async () => {
         if (!titel) {
             alert('Geef de taak een titel!');
@@ -90,7 +60,7 @@ export default function NieuweTaak() {
         }
 
         setOpslaanLaden(true);
-        const vragenlijst = genereerVragenLijst();
+        const vragenlijst = genereerVragenLijstV3(staat);
 
         const { error } = await supabase.from('taken').insert({
             leraar_id: user.id,
@@ -114,8 +84,8 @@ export default function NieuweTaak() {
             return;
         }
 
-        const vragen = genereerVragenLijst();
-        printTaakPDF(titel, vragen);
+        const vragen = genereerVragenLijstV3(staat);
+        printTaakPDFV3(titel, vragen);
     };
 
     if (laden) return <div className="container"><h1>Laden...</h1></div>;
