@@ -17,6 +17,7 @@ export default function TeacherDashboard() {
     const [analyseData, setAnalyseData] = useState(null);
     const [analyseBereik, setAnalyseBereik] = useState('all'); // all, 30, 7
     const [laden, setLaden] = useState(true);
+    const [toonAlleenTaken, setToonAlleenTaken] = useState(false);
 
     // Student Detail Analytics States
     const [studentResultaten, setStudentResultaten] = useState([]);
@@ -74,7 +75,7 @@ export default function TeacherDashboard() {
         setLaden(false);
     };
 
-    const selecteerKlas = async (klas) => {
+    const selecteerKlas = async (klas, filterGeforceerd = toonAlleenTaken) => {
         setLaden(true);
         setGeselecteerdeKlas(klas);
         setGeselecteerdeLeerling(null);
@@ -92,10 +93,16 @@ export default function TeacherDashboard() {
         // 2. Oefeningen ophalen voor het overzicht
         if (leerlingenData?.length > 0) {
             const ids = leerlingenData.map(l => l.id);
-            const { data: oefeningen } = await supabase
+            let query = supabase
                 .from('oefeningen')
-                .select('student_id, score, totaal_tijd, datum, instellingen')
+                .select('student_id, score, totaal_tijd, datum, instellingen, taak_id')
                 .in('student_id', ids);
+
+            if (filterGeforceerd) {
+                query = query.not('taak_id', 'is', null);
+            }
+
+            const { data: oefeningen } = await query;
 
             // Aggregeren
             const stats = leerlingenData.map(l => {
@@ -114,17 +121,22 @@ export default function TeacherDashboard() {
         setLaden(false);
     };
 
-    const selecteerLeerling = async (leerling, range = 'all') => {
+    const selecteerLeerling = async (leerling, range = 'all', filterGeforceerd = toonAlleenTaken) => {
         setWeergave('detail');
         setGeselecteerdeLeerling(leerling);
         setLaden(true);
 
         // 1. Oefeningen ophalen
-        const { data: oefeningen } = await supabase
+        let query = supabase
             .from('oefeningen')
             .select('*, taken(titel)')
-            .eq('student_id', leerling.id)
-            .order('datum', { ascending: false });
+            .eq('student_id', leerling.id);
+
+        if (filterGeforceerd) {
+            query = query.not('taak_id', 'is', null);
+        }
+
+        const { data: oefeningen } = await query.order('datum', { ascending: false });
         setAlleStudentHistorie(oefeningen || []);
 
         // 2. Vraag resultaten ophalen voor analyse
@@ -211,7 +223,7 @@ export default function TeacherDashboard() {
         setTweedeKansStats({ totaal: tkTotaal, succes: tkSucces });
     };
 
-    const laadAnalyse = async (range = analyseBereik) => {
+    const laadAnalyse = async (range = analyseBereik, filterGeforceerd = toonAlleenTaken) => {
         if (!geselecteerdeKlas || leerlingen.length === 0) return;
         setLaden(true);
         setWeergave('analyse');
@@ -222,8 +234,12 @@ export default function TeacherDashboard() {
         // 1. Haal oefeningen op met tijdfilter
         let query = supabase
             .from('oefeningen')
-            .select('id, student_id, score, instellingen')
+            .select('id, student_id, score, instellingen, taak_id')
             .in('student_id', leerlingIds);
+
+        if (filterGeforceerd) {
+            query = query.not('taak_id', 'is', null);
+        }
 
         if (range === '30' || range === '7') {
             const dagen = parseInt(range);
@@ -335,22 +351,54 @@ export default function TeacherDashboard() {
 
     return (
         <div className="container" style={{ maxWidth: '1200px' }}>
-            <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                <div>
-                    <h2 style={{ color: 'var(--primary-color)', marginBottom: '0.5rem' }}>Capy-Count</h2>
-                    <h1 style={{ margin: 0 }}>Leraar Dashboard</h1>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <button className={`btn ${weergave === 'analyse' ? 'btn-primary' : 'btn-outline'}`} onClick={laadAnalyse} disabled={!geselecteerdeKlas}>
-                        <BarChart size={18} style={{ marginRight: '0.5rem' }} /> Klassenanalyse
-                    </button>
-                    <button className="btn btn-outline" onClick={() => router.push('/leraar/taken')}>
-                        <BookOpen size={18} style={{ marginRight: '0.5rem' }} /> Taken Beheren
-                    </button>
-                    <span>Welkom, <strong>{user?.voornaam}</strong></span>
-                    <button className="btn btn-outline" onClick={logout}><LogOut size={18} /></button>
-                </div>
-            </header>
+            <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                gap: '1.5rem',
+                marginBottom: '2.5rem',
+                background: 'rgba(241, 245, 249, 0.4)',
+                padding: '1rem',
+                borderRadius: '16px',
+                border: '1px solid rgba(0,0,0,0.02)'
+            }}>
+                <button
+                    className={`btn ${weergave === 'analyse' ? 'btn-primary' : 'btn-outline'}`}
+                    onClick={laadAnalyse}
+                    disabled={!geselecteerdeKlas}
+                    style={{ minWidth: '180px', display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '1rem' }}
+                >
+                    <BarChart size={24} />
+                    <span>Klassenanalyse</span>
+                </button>
+                <button
+                    className="btn btn-outline"
+                    onClick={() => router.push('/leraar/taken')}
+                    style={{ minWidth: '180px', display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '1rem' }}
+                >
+                    <BookOpen size={24} />
+                    <span>Taken Beheren</span>
+                </button>
+                <button
+                    className={`btn ${toonAlleenTaken ? 'btn-primary' : 'btn-outline'}`}
+                    onClick={() => {
+                        const nieuwStatus = !toonAlleenTaken;
+                        setToonAlleenTaken(nieuwStatus);
+                        if (!geselecteerdeKlas) return;
+
+                        if (weergave === 'overzicht') {
+                            selecteerKlas(geselecteerdeKlas, nieuwStatus);
+                        } else if (weergave === 'detail' && geselecteerdeLeerling) {
+                            selecteerLeerling(geselecteerdeLeerling, detailFilterBereik, nieuwStatus);
+                        } else if (weergave === 'analyse') {
+                            laadAnalyse(analyseBereik, nieuwStatus);
+                        }
+                    }}
+                    style={{ minWidth: '180px', display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '1rem' }}
+                >
+                    <AlertCircle size={24} />
+                    <span>{toonAlleenTaken ? 'Alleen Taken' : 'Alle Resultaten'}</span>
+                </button>
+            </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '2rem' }}>
                 {/* Zijbalk: Klassen & Leerlingen */}
